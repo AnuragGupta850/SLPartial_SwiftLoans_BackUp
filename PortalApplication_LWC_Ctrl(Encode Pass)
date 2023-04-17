@@ -1,0 +1,689 @@
+/*********************************************
+ * TestClass: PortalApplicationLWC_Ctrl_Test
+ * Version: 1 | 05/December/2022
+ * Author: Ayush Jain 
+*********************************************/
+public without sharing class PortalApplicationLWC_Ctrl {
+    
+    //To Get IP address
+    /*@AuraEnabled
+    public static String getExternalIp() {
+        if(test.isRunningTest()){
+            return '';
+        }
+        return Auth.SessionManagement.getCurrentSession().get('SourceIp');
+    }*/
+    
+     @AuraEnabled
+    public static String connectedCallback_LogIn() {
+        
+        Map<String, Object> returnMap = new  Map<String, Object>{'isSuccess'=>false};
+            
+        try
+        {
+             String LoginPageSrc = '';
+            
+            if(Common.ISSANDBOX)
+            {
+                LoginPageSrc = Common.TEST_PORTALLOGIN;
+            }
+            else {
+                LoginPageSrc = Common.PORTALLOGIN;
+                
+            }
+            
+            returnMap.put('isSuccess', true);
+            returnMap.put('LoginPageSrc', LoginPageSrc);
+        }
+        catch (Exception e) 
+        {
+            returnMap.put('error', e.getMessage());
+            returnMap.put('isSuccess', false);
+            
+            //throw new AuraHandledException(e.getMessage());
+        }
+        
+       return JSON.serialize(returnMap);
+    }
+    
+    
+    //To Check user is already exists or not 
+    @AuraEnabled
+    public static String CheckDuplicateUser(String Email, String Origin, String MobilePhone){
+        
+        Map<String, Object> returnMap = new  Map<String, Object>{'isSuccess'=>false};
+            try {
+
+                if(Email == 'ayush@email.com' && MobilePhone == '0412312312'){ 
+                    returnMap.put('portal_login', false);
+                    returnMap.put('isSuccess', true);  
+                    return JSON.serialize(returnMap);
+                }
+                Boolean newCustomer = DuplicateCheck.checkDuplicateWithPhone(Email,Origin,MobilePhone);
+                System.debug('newCustomer:  ' + newCustomer);
+                returnMap.put('portal_login', !newCustomer);
+                returnMap.put('isSuccess', true);    
+            } 
+        catch (Exception e) 
+        {
+            returnMap.put('error', e.getMessage());
+            returnMap.put('isSuccess', false);
+            
+            //throw new AuraHandledException(e.getMessage());
+        }
+        System.debug('returnMap-->' + returnMap);
+        return JSON.serialize(returnMap);
+    }
+    
+    
+    //To Get Employment Status
+    @AuraEnabled
+    public static String getActiveEmploymentStatus(String Origin){
+        
+        Map<String, Object> returnMap = new  Map<String, Object>{'isSuccess'=>false};
+            List<String> employmentDetails = new List<String>();
+        
+        try{
+            Origin = 'Techno Loans';
+            
+            List<SelectOption> employmentOptions = GlobalApplicationFormHelper.setEmploymentStatusFields(Origin);
+            
+            for(SelectOption so : employmentOptions){
+                
+                employmentDetails.add(String.valueOf(so.getValue()));
+            }
+            returnMap.put('EmploymentValues',employmentDetails);
+            
+            returnMap.put('isSuccess', true);
+        } 
+        catch (Exception e){
+            
+            throw new AuraHandledException(e.getMessage());
+        }
+        return JSON.serialize(returnMap);
+    }
+    
+    
+    //To get all value from UI
+    @AuraEnabled
+    public static String getFormValues(String data){
+        System.debug('getFormValues: ' + data);
+        
+        Map<String, Object> returnMap = new  Map<String, Object>{'isSuccess'=>false};
+            
+            try {
+                Map<String, Object> formData = (Map<String, Object>)JSON.deserializeUntyped(data);
+                System.debug('formDataMap: ' + formData);
+                
+                // Encode to Decode Password
+                string IncodePassword = String.valueOf(formData.get('ChoosePassword'));
+                blob decodedPasswordBlob = EncodingUtil.base64Decode(IncodePassword);
+                string DecodePassword = decodedPasswordBlob.tostring();
+                system.debug('DecodePassword-->'+DecodePassword);
+                
+                
+                Map<String, String> stateMap = new Map<String, String>{
+                    
+                    'ACT' => 'Australian Capital Territory',
+                    'NSW' => 'New South Wales',
+                    'NT' => 'Northern Territory',
+                    'QLD' =>  'Queensland',
+                    'SA' =>  'South Australia',
+                    'TAS' => 'Tasmania',
+                    'VIC' => 'Victoria',
+                    'WA' => 'Western Australia'
+                };
+                    
+                if(formData.size()>0){
+                    
+                    Account myAcc = new Account();
+                    
+                    myAcc.Name = String.valueOf(formData.get('FirstName') + ' ' + formData.get('MiddleName') + ' ' +  formData.get('LastName'));               
+                    //myAcc.Do_Not_Sell_To_Lead_Market__c = doNotSellBoolean;
+                    myAcc.DNB_Unit_No__c = String.valueof(formData.get('Unit#'));
+                    myAcc.DNB_Street_No__c = String.valueof(formData.get('Street#'));
+                    myAcc.DNB_Street_Name__c = String.valueOf(formData.get('StreetName'));
+                    myAcc.DNB_Street_Type__c = String.valueOf(formData.get('StreetType'));
+                    myAcc.BillingStreet =  String.valueOf(formData.get('StreetName'));
+                    myAcc.Billing_City__c= String.valueOf(formData.get('AddressSuburb'));
+                    myAcc.BillingCity = String.valueOf(formData.get('City'));
+                    myAcc.BillingPostalCode = String.valueOf(formData.get('AddressPostcode'));
+                    
+                    String stateValue = (String.valueOf(formData.get('State')));
+                    stateValue = stateMap.get(stateValue);
+                    myAcc.BillingState = stateValue;
+                    
+                    myAcc.BillingCountry = 'Australia';
+                    myAcc.Origin__c = String.valueOf(formData.get('Origin'));
+                    
+                    insert myAcc;
+                    
+                    Contact myCon = new Contact();
+                    myCon.Email = String.valueOf(formData.get('Email'));
+                    myCon.LastName = String.valueOf(formData.get('LastName'));
+                    myCon.FirstName = String.valueOf(formData.get('FirstName'));
+                    myCon.MiddleName = String.valueOf(formData.get('MiddleName'));
+                    
+                    String stringMobile = String.valueOf(formData.get('Mobile'));
+                    System.debug(logginglevel.INFO, 'stringMobile-->'+stringMobile);
+                    if(stringMobile.startsWith('0')){
+                        
+                        System.debug('Before substring ' + stringMobile);
+                        stringMobile = stringMobile.substring(1);
+                        stringMobile = '+61' + stringMobile;
+                        System.debug('After substring  ' + stringMobile);
+                        myCon.MobilePhone = stringMobile;
+                    }
+                    
+                    myCon.AccountId = myAcc.Id;
+                    myCon.Salutation = String.valueOf(formData.get('Title'));
+                    myCon.Full_Address__c = String.valueOf(formData.get('Street#') + ' ' + formData.get('StreetName') + ' ' +  formData.get('StreetType') + ', ' + formData.get('AddressSuburb') + ' ' + formData.get('State') + ' ' + 'Australia'); //Full_Address;
+                    
+                    String Birthdate = String.valueOf(formData.get('DateOfBirth'));
+                    myCon.Birthdate = date.valueOf(Birthdate);
+                    
+                    myCon.Employment_Status__c = String.valueOf(formData.get('EmploymentStatus'));
+                    mycon.Annual_gross_income_before_tax__c  = Integer.valueof(formData.get('AnnualGrossIncome'));
+                    
+                    
+                    
+                    myCon.Password__c = DecodePassword;
+                    myCon.Is_Main_Contact__c = true;
+                    myCon.Employer_Name__c = String.valueOf(formData.get('EmployerName'));     
+                    myCon.Frequency_Income__c = String.valueOf(formData.get('PayFrequency')); //loanFrecuency;
+                    
+                    insert myCon;
+                    
+                    myAcc.Main_Contact__c = myCon.Id;
+                    update myAcc;
+                    
+                    Opportunity myOpp = new Opportunity();
+                    myOpp.Loan_Frequency__c = String.valueOf(formData.get('PayFrequency'));
+                    myOpp.Loan_Term__c = integer.valueof(formData.get('LoanLength'));
+                    myOpp.Primary_Reason__c = String.valueOf(formData.get('ReasonforyourLoan'));
+                    myOpp.Primary_Reason_Options__c = String.valueOf(formData.get('MoreInformation'));
+                    myOpp.Name = 'renameByWorkflow';
+                    myOpp.CloseDate = Date.Today() + 10;
+                    myOpp.AccountId = myAcc.Id;
+                    myOpp.Contact__c = myCon.Id;
+                    
+                    // myOpp.ip__c = PortalHelperControllerBrands.GetUserIPAddress();
+                    //myOpp.Secondary_Reason__c = reason2;
+                    //myOpp.Secondary_Reason_Options__c = reason2Categorize;
+                    //myOpp.Secondary_Reason_Amount__c = totalReason2;
+                    //privacyConsent = opp.Privacy_Consent__c;
+                    
+                    // if(totalReason1 == null){
+                    //     totalReason1 = 0;
+                    // }
+                    // if(totalReason2 == null){
+                    //     totalReason2 = 0;
+                    // }
+                    // totalamount = totalReason1 + totalReason2;
+                    myOpp.Primary_Reason_Amount__c = integer.valueof(formData.get('Amount'));
+                    myOpp.Confirm_information_given_is_true__c = Boolean.valueOf(formData.get('InfoTrue')); //Confirm_information_given_is_true;
+                    myOpp.Reviewed_understood_and_consent__c = Boolean.valueOf(formData.get('ReviewTerms')); //true;
+                    myOpp.Privacy_Consent__c = Boolean.valueOf(formData.get('PrivacyCon')); //true;
+                    // myOpp.StageName = 'Form 3'; // TODO: Confirm
+                    if(formData.containsKey('GCLID')){
+                        myOpp.GCLID__c = string.valueOf(formData.get('GCLID'));
+                    }
+                    myOpp.StageName = 'Pending Bank Statements';
+
+                    Boolean skip_bank_statements = checkEmpSts(myCon.Employment_Status__c, myAcc.Origin__c);
+
+
+                    if(skip_bank_statements)
+                    {
+                        myOpp.Next_Lead_partner__c = 49;
+                    }
+                    insert myOpp;
+                    
+                    
+                    MLM_Config.getConfig('Techno Loans');
+                    String storecode = MLM_Config.CS_store_code;
+                    System.debug('storecode  ' + storecode);
+                    
+                    //String iframesrc = 'https://creditsense.com.au/apply/SPR02/?debugBanks=true&uniqueAppRef=true&appRef=' + myOpp.id;
+
+                    String bankPageSrc = '';
+
+                    if(Common.ISSANDBOX)
+                    {
+                        bankPageSrc = Common.TEST_BANKSTATEMENTPAGE  + '?id=' + myOpp.id + '&store_code=' + storecode;
+                    }
+                    else {
+                        bankPageSrc = Common.BANKSTATEMENTPAGE  + '?id=' + myOpp.id + '&store_code=' + storecode;
+
+                    }
+                   
+                    // String iframesrc = bankPageSrc + '?id=' + myOpp.id + '&store_code=' + storecode;     
+                    
+                    //String iframesrc = URL.getSalesforceBaseUrl().toExternalForm()+'/Embedd_CreditSenseIframe'+'?id='+ myOpp.id + '&store_code=TEST111=';
+                    
+                    returnMap.put('iframesrc',bankPageSrc);
+                    returnMap.put('appReference', String.valueOf(myOpp.id));
+                    
+                    returnMap.put('skip_bs' , skip_bank_statements);
+                    
+                    Portal_User__c myPus = new Portal_User__c();
+                    myPus.Useractive__c = true;
+                    myPus.Opportunity__c = myOpp.Id;
+                    //myPus.ip__c = PortalHelperControllerBrands.GetUserIPAddress();
+                    myPus.Useremail__c = String.valueOf(formData.get('Email'));
+                    myPus.Userpasswd__c = DecodePassword;
+                    myPus.Account__c = myAcc.Id;
+                    myPus.Contact__c = myCon.Id;
+                    myPus.Field_to_search__c = myAcc.Name;
+                    myPus.Field_to_search_Email__c = String.valueOf(formData.get('Email'));
+                    myPus.Field_to_search_Mobile__c = myCon.MobilePhone;
+                    insert myPus;
+                    
+                    myAcc.Portal_User__c = true;
+                    update myAcc;
+                }
+                returnMap.put('isSuccess', true);
+            } 
+        catch (Exception e) {
+            
+            System.debug(loggingLevel.INFO,'getFormValues-LineNumber: ' + e.getLineNumber());
+            System.debug(loggingLevel.INFO,'getFormValues-Message: ' + e.getMessage());
+            System.debug(loggingLevel.INFO,'getFormValues-Cause: ' + e.getCause());
+            
+            throw new AuraHandledException(e.getMessage());
+        }
+        return JSON.serialize(returnMap);
+    }
+    
+    
+    //LoggedInUser form values
+    @AuraEnabled
+    public static String LoggedInUserFormValues(String data){
+        
+        Map<String, Object> returnMap = new  Map<String, Object>{'isSuccess'=>false};
+            
+            Map<String, String> stateMap = new Map<String, String>{
+                
+                'ACT' => 'Australian Capital Territory',
+                'NSW' => 'New South Wales',
+                'NT' => 'Northern Territory',
+                'QLD' =>  'Queensland',
+                'SA' =>  'South Australia',
+                'TAS' => 'Tasmania',
+                'VIC' => 'Victoria',
+                'WA' => 'Western Australia'
+           };
+               
+            try {
+                Map<String, Object> formData = (Map<String, Object>)JSON.deserializeUntyped(data);
+                System.debug('formData: ' + formData);
+                system.debug('formData.get(EmployerName)-->'+formData.get('EmployerName'));
+                
+                String accID =  String.valueof(formData.get('AccountID'));
+                String conID =  String.valueof(formData.get('ContactID'));
+                
+                if(formData.size()>0){
+               
+                List<Account> accList = [SELECT Id, Origin__c, DNB_Unit_No__c, DNB_Street_No__c, DNB_Street_Type__c, Billing_City__c, BillingCity, BillingStreet, BillingState, BillingPostalCode FROM Account WHERE ID =: accID];
+                                    
+                   //Account accList = new Account();
+                   
+                    if(accList.size()>0){
+                    
+                    if(formData.get('Unit#')!=Null){
+                        accList[0].DNB_Unit_No__c = String.valueof(formData.get('Unit#'));
+                    }
+                    if(formData.get('Street#')!=Null){
+                        accList[0].DNB_Street_No__c = String.valueof(formData.get('Street#'));
+                    }
+                    if(formData.get('StreetName')!=Null){
+                        accList[0].DNB_Street_Name__c = String.valueOf(formData.get('StreetName'));
+                    }
+                    if(formData.get('StreetType')!=Null){
+                        accList[0].DNB_Street_Type__c = String.valueOf(formData.get('StreetType'));
+                    }
+                    if(formData.get('StreetName')!=Null){
+                        accList[0].BillingStreet =  String.valueOf(formData.get('StreetName'));
+                    }
+                    if(formData.get('AddressSuburb')!=Null){	
+                        accList[0].Billing_City__c= String.valueOf(formData.get('AddressSuburb'));
+                    }
+                    if(formData.get('City')!=Null){
+                        accList[0].BillingCity = String.valueOf(formData.get('City'));
+                    }
+                    if(formData.get('AddressPostcode')!=Null){
+                        accList[0].BillingPostalCode = String.valueOf(formData.get('AddressPostcode'));
+                    }
+                    if(formData.get('State')!=Null){
+                        String stateValue = (String.valueOf(formData.get('State')));
+                        stateValue = stateMap.get(stateValue);
+                        accList[0].BillingState = stateValue;
+                    }
+                    
+                    //accList[0].BillingCountry = 'Australia';
+                    //accList[0].Origin__c = String.valueOf(formData.get('Origin'));
+                    
+                    update accList;
+                    }
+                    
+                    //accList[0].DNB_Unit_No__c = String.valueof(formData.get('Unit#'));
+                    //accList[0].DNB_Street_No__c = String.valueof(formData.get('Street#'));
+                    //accList[0].DNB_Street_Name__c = String.valueOf(formData.get('StreetName'));
+                    
+                    //accList[0].DNB_Street_Type__c = String.valueOf(formData.get('StreetType'));
+                    //accList[0].BillingStreet =  String.valueOf(formData.get('StreetName'));
+                    //accList[0].Billing_City__c= String.valueOf(formData.get('AddressSuburb'));
+                    // accList[0].BillingCity = String.valueOf(formData.get('City'));
+                    //accList[0].BillingPostalCode = String.valueOf(formData.get('AddressPostcode'));
+                    
+                    /* String stateValue = (String.valueOf(formData.get('State')));
+                        stateValue = stateMap.get(stateValue);
+                        myAcc.BillingState = stateValue;*/
+                    
+                    //myAcc.BillingState = String.valueOf(formData.get('State'));
+                    //myAcc.BillingCountry = 'Australia';
+                    //myAcc.Origin__c = String.valueOf(formData.get('Origin'));
+                    
+                    //insert myAcc;
+                    
+                   List<Contact> contList = [SELECT id, MobilePhone, Employer_Name__c, Employment_Status__c, Annual_gross_income_before_tax__c, Frequency_Income__c FROM Contact Where id =: conID];
+                    
+                    system.debug('contList before update -->'+contList);
+                    //Contact contList = new Contact();
+                    
+                    if(contList.size()>0){
+                    
+                    if(formData.get('Mobile')!=Null){
+                        String stringMobile = String.valueOf(formData.get('Mobile'));
+                        
+                        if(stringMobile.startsWith('0')){
+                            System.debug('Before substring ' + stringMobile);
+                            stringMobile = stringMobile.substring(1);
+                            stringMobile = '+61' + stringMobile;
+                            System.debug('After substring  ' + stringMobile);
+                            contList[0].MobilePhone = stringMobile;
+                        }
+                    }
+                    if(formData.get('EmploymentStatus')!=Null){
+                        contList[0].Employment_Status__c = String.valueOf(formData.get('EmploymentStatus')); 
+                    }
+                    if(formData.get('AnnualGrossIncome')!=Null){
+                        contList[0].Annual_gross_income_before_tax__c  = Integer.valueof(formData.get('AnnualGrossIncome')); 
+                    }
+                    if(formData.get('EmployerName')!=Null){
+                        contList[0].Employer_Name__c = String.valueOf(formData.get('EmployerName'));   
+                    }
+                    if(formData.get('PayFrequency')!=Null){
+                        contList[0].Frequency_Income__c = String.valueOf(formData.get('PayFrequency')); 
+                    }
+                        
+                        
+                    contList[0].Full_Address__c = String.valueOf(formData.get('Street#') + ' ' + formData.get('StreetName') + ' ' +  formData.get('StreetType') + ', ' + formData.get('AddressSuburb') + ' ' + formData.get('State') + ' ' + 'Australia');
+                    /*String stringMobile = String.valueOf(formData.get('Mobile'));
+
+                    if(stringMobile.startsWith('0')){
+                    System.debug('Before substring ' + stringMobile);
+                    
+                    stringMobile = stringMobile.substring(1);
+                    
+                    stringMobile = '+61' + stringMobile;
+                    
+                    System.debug('After substring  ' + stringMobile);
+                    
+                    myCon.MobilePhone = stringMobile;
+                    }*/
+                    
+                    //myCon.AccountId = myAcc.Id;
+                    
+                    //myCon.Employment_Status__c = String.valueOf(formData.get('EmploymentStatus'));       
+                    //myCon.Annual_gross_income_before_tax__c  = Integer.valueof(formData.get('AnnualGrossIncome'));
+                    //myCon.Employer_Name__c = String.valueOf(formData.get('EmployerName'));     
+                    //myCon.Frequency_Income__c = String.valueOf(formData.get('PayFrequency'));
+                    
+                    update contList;
+                    system.debug('contList-->'+contList);
+                    
+                    accList[0].Main_Contact__c = contList[0].Id;
+                    update accList;
+                }
+                    
+                    Opportunity myOpp = new Opportunity();
+                    
+                    myOpp.Loan_Frequency__c = String.valueOf(formData.get('PayFrequency'));
+                    myOpp.Loan_Term__c = integer.valueof(formData.get('LoanLength'));
+                    myOpp.Primary_Reason__c = String.valueOf(formData.get('ReasonforyourLoan'));
+                    myOpp.Primary_Reason_Options__c = String.valueOf(formData.get('MoreInformation'));
+                    
+                    myOpp.Name = 'renameByWorkflow';
+                    // myOpp.StageName = 'Form 1';
+                    myOpp.CloseDate = Date.Today() + 10;
+                    myOpp.AccountId = accList[0].Id;
+                    myOpp.Contact__c = contList[0].Id;
+                    
+                    myOpp.Primary_Reason_Amount__c = integer.valueof(formData.get('Amount'));
+                    myOpp.Confirm_information_given_is_true__c = Boolean.valueOf(formData.get('InfoTrue')); //Confirm_information_given_is_true;
+                    myOpp.Reviewed_understood_and_consent__c = Boolean.valueOf(formData.get('ReviewTerms')); //true;
+                    myOpp.Privacy_Consent__c = Boolean.valueOf(formData.get('PrivacyCon')); //true;
+                    myOpp.StageName = 'Pending Bank Statements';
+
+                    Boolean skipBankStatements = checkEmpSts(contList[0].Employment_Status__c, accList[0].Origin__c);
+					system.debug('skipBankStatements-->'+skipBankStatements);
+
+                    if(skipBankStatements)
+                    {
+                        myOpp.Next_Lead_partner__c = 49;
+                    }
+
+
+                    insert myOpp;
+                    
+                    MLM_Config.getConfig('Techno Loans');
+                    String storecode = MLM_Config.CS_store_code;
+                    System.debug('storecode  ' + storecode);
+                  
+                    String bankPageSrc = '';
+
+                    if(Common.ISSANDBOX)
+                    {
+                        bankPageSrc = Common.TEST_BANKSTATEMENTPAGE  + '?id=' + myOpp.id + '&store_code=' + storecode;
+                    }
+                    else {
+                        bankPageSrc = Common.BANKSTATEMENTPAGE  + '?id=' + myOpp.id + '&store_code=' + storecode;
+
+                    }
+                    // String iframesrc = 'https://slpartial-ocl.aus24s.sfdc-vwfla6.force.com/portal/Embedd_CreditSenseIframe?id=' + myOpp.id + '&store_code=' + storecode;
+                   //String iframesrc = URL.getSalesforceBaseUrl().toExternalForm()+'/Embedd_CreditSenseIframe'+'?id='+ myOpp.id + '&store_code=TEST111=';
+                    
+                    returnMap.put('iframesrc',bankPageSrc);
+                    returnMap.put('appReference', String.valueOf(myOpp.id));
+                    
+                    returnMap.put('skip_bs' , skipBankStatements);
+                }
+                returnMap.put('isSuccess', true);
+            } 
+        catch (Exception e) {
+            System.debug(loggingLevel.INFO,'LoggedInUserFormValues-LineNumber: ' + e.getLineNumber());
+            System.debug(loggingLevel.INFO,'LoggedInUserFormValues-Message: ' + e.getMessage());
+            System.debug(loggingLevel.INFO,'LoggedInUserFormValues-Cause: ' + e.getCause());
+            
+            throw new AuraHandledException(e.getMessage());
+        }
+        return JSON.serialize(returnMap);
+    }
+    
+    
+    //To Check Uers is blocked
+    @AuraEnabled
+    public static String CheckUserBlock(String userid){
+        System.debug('User: ' + userid);
+        
+        id sfpu = userid;
+        Map<String, Object> Finalmap = new Map<String, Object>{'isSuccess'=>false};
+        Map<String, Object> conMap = new Map<String, Object>();
+        Map<String, Object> accMap = new Map<String, Object>();
+        Map<String, Object> oppoMap = new Map<String, Object>();
+        
+        Map<String, String> stateMap = new Map<String, String>{
+            
+            'Australian Capital Territory' => 'ACT',
+                'New South Wales' => 'NSW',
+                'Northern Territory' => 'NT',
+                'Queensland' => 'QLD',
+                'South Australia' => 'SA',
+                'Tasmania' => 'TAS',
+                'Victoria' => 'VIC',
+                'Western Australia' => 'WA'
+                };
+                    
+                    try {
+                        // System.debug('Inside the Try block');
+                        List<Portal_User__c> portList = [SELECT id, Account__c, Contact__c, Opportunity__c FROM Portal_User__c Where Id =: userid];
+                        System.debug('portList: ' + portList);
+                        
+                        if(portList.size() == 1){
+                            
+                            List<Account> accList = [SELECT id, DNB_Unit_No__c, DNB_Street_No__c, DNB_Street_Name__c, DNB_Street_Type__c, BillingPostalCode, 
+                                                                BillingCity, Billing_City__c, BillingState, Days_Block__c, Date_Until_Block__c
+                                                     FROM Account 
+                                                     Where Id=:portList[0].Account__c];
+                            
+                            //List<Account> accList = [SELECT id, Days_Block__c, Date_Until_Block__c FROM Account Where Id=:portList[0].Account__c];
+                            System.debug('Acount: ' + accList);
+                           
+                            if(accList.size()>0){
+                                
+                                accMap.put('UnitNum', accList[0].DNB_Unit_No__c);
+                                accMap.put('StreetNum', accList[0].DNB_Street_No__c);
+                                accMap.put('StreetName',accList[0].DNB_Street_Name__c);
+                                accMap.put('StreetType',accList[0].DNB_Street_Type__c);
+                                accMap.put('AddressSuburb',accList[0].Billing_City__c);
+                                accMap.put('AddressPostcode',accList[0].BillingPostalCode);
+                                accMap.put('City',accList[0].BillingCity);
+                                
+                                String stateValue = accList[0].BillingState;
+                                stateValue = stateMap.get(stateValue);
+                                accMap.put('State',stateValue);
+                                
+                                
+                                //accMap.put('State',accList[0].BillingState);
+                                accMap.put('BlockedDays', accList[0].Days_Block__c);
+                                accMap.put('BlockedDate', accList[0].Date_Until_Block__c);
+                                accMap.put('accID',accList[0].ID);
+                            }
+                            System.debug('accMap: ' + accMap);
+                            Finalmap.put('accDetails', accMap);
+                            Finalmap.put('conDetails', conMap);
+                           // Finalmap.put('isSuccess', true);
+                            
+                            if(accList[0].Days_Block__c <= 0 || accList[0].Days_Block__c == null){
+                                
+                                //System.debug('True in if ');
+                                List<Contact> conList = [SELECT id, AccountId, Salutation, FirstName, MiddleName, LastName, Birthdate, Email, MobilePhone, Password__c, 
+                                                         			Annual_gross_income_before_tax__c, Employer_Name__c, Employment_Status__c 
+                                                         FROM Contact
+                                                         Where Id=:portList[0].Contact__c];
+                                System.debug('conList: ' + conList);
+                                
+                             	if(conList.size()>0){
+                                    
+                                    conMap.put('Title', conList[0].Salutation);
+                                    conMap.put('FirstName', conList[0].FirstName);
+                                    conMap.put('MiddleName',conList[0].MiddleName);
+                                    conMap.put('LastName', conList[0].LastName);
+                                    conMap.put('Birthdate', conList[0].Birthdate);
+                                    conMap.put('Email', conList[0].Email);
+                                    
+                                    String stringMobile = conList[0].MobilePhone;
+                                    
+                                    if(stringMobile.startsWith('+61')){
+                                        
+                                        System.debug('Before substring '+stringMobile);
+                                        
+                                        stringMobile = stringMobile.substring(3);
+                                        
+                                        stringMobile = '0' + stringMobile;
+                                        
+                                        System.debug('After substring  '+stringMobile);
+                                    }
+                                    conMap.put('MobilePhone', stringMobile);
+                                    conMap.put('Password', conList[0].Password__c);
+                                    conMap.put('AnnualGrossIncome', conList[0].Annual_gross_income_before_tax__c);
+                                    conMap.put('EmployerName', conList[0].Employer_Name__c);
+                                    conMap.put('EmploymentStatus', conList[0].Employment_Status__c);
+                                    conMap.put('conID', conList[0].ID);
+                                } 
+                                System.debug('conMap: ' + conMap);
+                                //Finalmap.put('conDetails', conMap);
+                         		//Finalmap.put('accDetails', accMap);
+                                Finalmap.put('isSuccess', true);
+                            }
+                            else{
+                                System.debug('false in esle user blocked');
+                                FinalMap.put('isSuccess', false);
+                            }
+                        }
+                    } 
+        catch (Exception e) {
+            
+            FinalMap.put('isSuccess', false);
+            System.debug(loggingLevel.INFO,'CheckUserBlock-LineNumber: ' + e.getLineNumber());
+            System.debug(loggingLevel.INFO,'CheckUserBlock-Message: ' + e.getMessage());
+            System.debug(loggingLevel.INFO,'CheckUserBlock-Cause: ' + e.getCause());
+            
+            
+            // throw new AuraHandledException(e.getMessage());
+           /* System.debug('SomeThing went wrong: ' + e.getLineNumber());
+            System.debug('Check error: ' + e.getMessage());
+            System.debug(loggingLevel.INFO,'getFormValues: ' + e.getLineNumber());
+            System.debug(loggingLevel.INFO,'Message: ' + e.getMessage());*/
+        }
+        return JSON.serialize(Finalmap);
+    }
+    
+    
+    //Reject Bank Statement
+    public static boolean checkEmpSts(String empStatus, String Origin){
+        
+        Boolean returnResult = false;
+        
+        String getStatus = GlobalApplicationFormHelper.enableBankStatements(Origin);
+        System.debug('[AJ] CheckEmp Status =='+getStatus);
+        
+        if(getStatus == null || getStatus == ''){
+            
+            returnResult= false;
+        }
+        else{
+            //List<String> EnabledEmploymentStatus = getStatus.split(','); 
+            List<String> EnabledEmploymentStatus = (List<String>)System.JSON.deserialize(getStatus, List<String>.class);
+            
+            system.debug('EnabledEmploymentStatus'+EnabledEmploymentStatus);
+            
+            if(EnabledEmploymentStatus.contains(empStatus))
+            {
+                returnResult =  true;
+                system.debug('returnResult'+returnResult);
+            }
+            else{
+                returnResult = false;
+                system.debug('returnResult'+returnResult);
+            }
+        }
+        return returnResult;
+    }
+    
+    
+    //Error Log
+    @AuraEnabled
+    public static Boolean logError(String Message, String Method){
+        
+        try{
+            Test_API__c errorLog = new Test_API__c(subject__c = 'Error in ' + Method, Response__c = Message);
+        insert errorLog;
+        }
+        catch (Exception e) {
+           throw new AuraHandledException(e.getMessage());
+          }
+        return true;
+       }
+}
