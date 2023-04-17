@@ -1,0 +1,1430 @@
+import { LightningElement, wire, track, api } from 'lwc';
+
+// To import Picklist values
+import { getObjectInfo } from 'lightning/uiObjectInfoApi';
+import { getPicklistValues } from 'lightning/uiObjectInfoApi';
+import Opportunity_Object from '@salesforce/schema/Opportunity';
+import Primary_Reason_Options from '@salesforce/schema/Opportunity.Primary_Reason_Options__c';
+import Primary_Reason from '@salesforce/schema/Opportunity.Primary_Reason__c';
+import Contact_Object from '@salesforce/schema/Contact';
+import Salutation from '@salesforce/schema/Contact.Salutation';
+
+// To Navigation
+import { NavigationMixin } from 'lightning/navigation';
+
+
+//To get form factor
+import FORM_FACTOR from '@salesforce/client/formFactor';
+
+
+//Address Fetch
+import placeSearch from '@salesforce/apex/AddressSearchController.placeSearch';
+import getAddress from "@salesforce/apex/AddressSearchController.getAddress";
+
+
+//Apex Methods
+import getActiveEmploymentStatus from '@salesforce/apex/PortalApplicationLWC_Ctrl.getActiveEmploymentStatus';
+import CheckDuplicateUser from "@salesforce/apex/PortalApplicationLWC_Ctrl.CheckDuplicateUser";
+import getFormValues from "@salesforce/apex/PortalApplicationLWC_Ctrl.getFormValues";
+//import getExternalIp from '@salesforce/apex/PortalApplicationLWC_Ctrl.getExternalIp';
+import connectedCallback_LogIn from '@salesforce/apex/PortalApplicationLWC_Ctrl.connectedCallback_LogIn';
+import logError from '@salesforce/apex/PortalApplicationLWC_Ctrl.logError';
+import { CurrentPageReference } from 'lightning/navigation';
+
+
+//To ShowTost
+import { ShowToastEvent } from 'lightning/platformShowToastEvent';
+
+
+export default class PortalApplicationLWC extends NavigationMixin (LightningElement) {
+
+    /********************STARTING VARIABLE DECLARATION*************/
+
+    @wire(CurrentPageReference)
+getPageReferenceParameters(currentPageReference) {
+if (currentPageReference) {
+console.log(currentPageReference.attributes.name);
+let pageApiName = currentPageReference.state;
+console.log('pageApiName-->',pageApiName);
+console.log('data => ', JSON.stringify(currentPageReference));
+
+if(pageApiName != null){
+this.GCLID = currentPageReference.state.gclid;
+}
+//this.GCLSRC = currentPageReference.attributes.gclsrc;
+}
+}
+
+    steps = [
+        { label: 'Your Loan', value: 'yourloan' },
+        { label: 'About You', value: 'aboutyou' },
+        { label: 'Contact Details', value: 'contactdetails' },
+        { label: 'Employment Details', value: 'employmentdetails' },
+        //{ label: 'Bank Statements', value: 'bankstatement' },
+        { label: 'Lender Search', value: 'lendersearch' },  
+    ];
+
+    //@wire(getExternalIp) ip;
+
+    @track GCLID = null;
+
+    @track dateValues = { maxDate: null };
+
+    deviceSize = { small: 12, medium: 10, large: 4, currentSize: 12 };
+
+    deviceSizeForButtons = { small: 12, medium: 10, large: 4, currentSize: 12 };
+
+    customSize = { splitIntoTwo: 6, splitIntoFour: 3 };
+
+    progressbarTypeDetailed = true;
+
+    loanAmount; //Review
+
+    currentStepProgress = 'yourloan'; //Review
+
+    @track slider = { min: 0, max: 10 };
+
+    @track buttonsDisabled = { continueToBs: true };
+
+    @api Origin = 'Techno Loans';
+
+    @track myMap;
+
+    isLoading = false;
+
+    @track formData = {
+
+        // Your Loan
+        reasonForLoan: null, subReasonForLoan: null, loanAmount: null, payFrequency:null, loanLength: null, payFrequencyvalidation:null,
+
+        // About You
+        title: null, firstName: null, middleName: null, lastName: null, choosePassword: null, confirmPassword: null,
+        email: null, confirmemail: null, mobile: null, dateOfBirth: null,
+
+        // Contact Details
+        unitNum: null, streetNum: null, streetName: null, streetType: null, addressSuburb: null, addressPostcode: null,
+        city: null, state: null,
+
+        // Employment Details
+        employmentStatus: null, annualGrossIncome: null, employerName: null, informationTrue: false, reviewedTerms: false, privacyConsent: false, appReference:null,
+
+        // for IP address
+        ipAddress:null,
+
+        // LoginURL
+        PortalLoginURL:null
+    };
+
+    //@track currentSteps = { yourloan: true, aboutyou: false, contactdetails: false, employmentdetails: false, bankstatement: false };
+    @track currentSteps = { yourloan: true, aboutyou: false, contactdetails: false, employmentdetails: false, lendersearch:false};
+
+
+    @track selectedEmploymentOptions = [];
+
+    @track stageSteps = { step1: true, step2: false, step3: false, step4: false, step5: false };
+
+    @track iframesrc = '';
+
+    //Reason-subreason for Loans Picklists
+    @wire(getObjectInfo, { objectApiName: Opportunity_Object })
+    opportunityInfo;
+
+    @track primaryReasonValues;
+    @track secondayReasonValues;
+
+    @wire(getPicklistValues, { recordTypeId: '$opportunityInfo.data.defaultRecordTypeId', fieldApiName: Primary_Reason_Options })
+    slaFieldInfo({ data, error }) {
+        // console.log('wire data', data);
+        if (data) this.slaFieldData = data;
+    }
+
+    @wire(getPicklistValues, { recordTypeId: '$opportunityInfo.data.defaultRecordTypeId', fieldApiName: Primary_Reason })
+    upsellFieldInfo({ data, error }) {
+        if (data) 
+        {
+            this.formData.subReasonForLoan = null;
+            this.primaryReasonValues = data.values;
+        }
+    }
+
+    sticky = false;
+    timeout = 4000;
+    showError() {
+      this.template
+        .querySelector("c-custom-toast-notification")
+        .showToast("error", "Something went wrong, please try after sometime.");
+    }
+    showWarning() {
+      this.template
+        .querySelector("c-custom-toast-notification")
+        .showToast("warning", "This is a Warning Message.");
+    }
+    showSuccess() {
+      this.template
+        .querySelector("c-custom-toast-notification")
+        .showToast("success", "Updated Successfully!!");
+    }
+    showInfo() {
+      this.template
+        .querySelector("c-custom-toast-notification")
+        .showToast("info", "This is a Info Message.");
+    }
+
+
+    //Loan amount options
+    get renderAmountOptions() {
+
+        let amountOptions = [];
+        //let ConditionAmount = [];
+        
+        for (var i = 3; i <= 26; i ++) {
+            
+            var calulatedAmt = i * 100;
+            if(calulatedAmt <= 2000 ){
+                var customObj = { label: '$' + calulatedAmt.toString(), value: '$' + calulatedAmt.toString() };
+                amountOptions.push(customObj);
+            }
+
+            if(calulatedAmt > 2000 && i >= 20){
+                var calulatedAmtNew = (i-16) * 500
+                var customObj = { label: '$' + calulatedAmtNew.toString(), value: '$' + calulatedAmtNew.toString() };
+                amountOptions.push(customObj);
+            } 
+        }
+        return amountOptions;
+    }
+
+
+    //Title PickList
+    @wire(getObjectInfo, { objectApiName: Contact_Object })
+    contactInfo;
+    @track titlevalue;
+
+    @wire(getPicklistValues, { recordTypeId: '$contactInfo.data.defaultRecordTypeId', fieldApiName: Salutation })
+    upsellFieldInfoCon({ data, error }) {
+        if (data) this.titlevalue = data.values;
+    }
+
+
+    //Address Lookup Componenent Variables
+    // GoogleAPIMethods
+    errors = [];
+    notifyViaAlerts = false;
+
+
+    //Portal Vars
+    @track inPortal = { Login: false };
+
+
+    // private property
+    bShowModal = false;
+
+ 
+    // JS function to close modal window by setting property as false 
+    closeModal() {
+        this.bShowModal = false;
+    }
+ 
+
+    /****************** STANDARD FUNCTIONS**********/
+    connectedCallback() {
+        //console.log('Inside Connected CaFORM_FACTOR' + FORM_FACTOR);
+
+        this.bShowModal = true;
+
+        if (FORM_FACTOR !== 'Large')
+            this.progressbarTypeDetailed = false;
+
+        let maxYear = new Date().getFullYear() - 18;
+        let maxMonth = new Date().getMonth();
+        let maxDate;
+
+        if(new Date().getDate().length === 1)
+        {
+        maxDate   = '0' + new Date().getDate(); 
+        }
+        else{
+        maxDate   =  new Date().getDate(); 
+        } 
+        //let maxDate = new Date().getDate();
+        this.dateValues.maxDate =  (maxYear.toString() + '-' + maxMonth.toString() + '-' + maxDate.toString());
+        console.log('this.dateValues.maxDate-->',this.dateValues.maxDate);
+
+        //console.log('Current Year',this.dateValues.maxDate);
+        this.getEmpStatus();  
+
+        connectedCallback_LogIn()
+        .then(result => {
+            let response = JSON.parse(result);
+            console.log('response-->',response);
+
+            if (response.isSuccess) {
+                this.formData.PortalLoginURL = response.LoginPageSrc;
+            }
+            else {
+                console.log('Problem in Coonectedcallback Login '); 
+            }
+        })
+        .catch(error => {
+            console.log('This is error-->', error);
+            
+            logError({
+                'Message':'PortalApplicationLWC: '+error.message,
+                'Method': 'connectedCallback_LogIn'
+            })
+            .then(result => {
+               console.log('Error Successfully logged ', result);
+            })
+            .catch(error => { 
+                console.log('Something went wrong! ', e.getmessage());
+            });
+        }); 
+    }
+
+
+    //***************STARTING FUNCTION DECLARATIONS FROM BELOW********************* */
+
+    /**For Login button Redirect URL***/
+
+    
+    /**FIRST PAGE FUNCTIONS STARTS***/
+
+    hideModalBox() {
+        console.log('hide login popoup');
+        this.inPortal.Login = false;
+
+    }
+
+    /**FIRST PAGE FUNCTIONS ENDS****/
+
+    async getEmpStatus() {
+        getActiveEmploymentStatus({ 'Origin': 'Techno Loans' })
+            .then(result => {
+                let response = JSON.parse(result);
+
+                if (response.isSuccess) {
+
+                    let empVals = response.EmploymentValues;
+                    this.selectedEmploymentOptions.push({ label: 'Select Option', value: '' });
+
+                    for (var eo in empVals) {
+
+                        //console.log('Emp--->'+eo);
+                        if (empVals[eo] != null && empVals[eo] != undefined && empVals[eo] != '') {
+
+                            var customObj = { label: empVals[eo], value: empVals[eo] };
+                            this.selectedEmploymentOptions.push(customObj);
+                        }
+                    }
+                }
+                else {
+                    throw new 'Error Occured!!';
+                }
+            })
+            .catch(error => {
+                console.log('This is error-->', error);
+                this.showError();
+
+                logError({
+                    'Message':'PortalApplicationLWC: '+error.message,
+                    'Method': 'getActiveEmploymentStatus'
+                })
+                .then(result => {
+                   console.log('Error Successfully logged ', result);
+                })
+                .catch(error => { 
+                    console.log('Something went wrong! ', e.getmessage());
+                });
+            });
+    }
+
+
+    handleLogin(event) {
+        console.log('redirecting to login');
+        //window.location = "PortalLogin";
+        // window.location.href = "https://swiftloan--slpartial.sandbox.my.salesforce-sites.com/portallogin";
+        window.open(this.formData.PortalLoginURL, "_self");
+    }
+
+    //This is used in the back button
+    reverseStepsUI(event) {
+
+        let stepButtonValue = event.target.value;
+        console.log('back button to --->' + stepButtonValue);
+        this.currentSteps = this.handleSteps(this.currentSteps, stepButtonValue);
+    }
+
+
+    funYourLoanVals() {
+        var isValidated = true;
+        this.template.querySelectorAll('[data-id="yourloanvals"]').forEach(element => {
+
+            switch (element.label) {
+
+                case 'Reason for your loan':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        console.log('UNDEFINED', element.label, '----', element.value);
+                    }
+                    else {
+                        this.formData.reasonForLoan = element.value;
+                    }
+                    // console.log(element.label,'----', element.value);
+                break;
+
+                case 'More Information':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        console.log('UNDEFINED', element.label, '----', element.value);
+                    }
+                    else {
+                        this.formData.subReasonForLoan = element.value;
+                        console.log('More Information: ' , this.formData.subReasonForLoan);
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Amount':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        console.log('UNDEFINED', element.label, '----', element.value);
+                    }
+                    else {
+                        this.formData.loanAmount = element.value;
+                    }
+                    // console.log(element.label,'----', element.value);
+                break;
+
+                case 'Select Loan Length':
+
+                    this.formData.loanLength = element.value;
+                   // console.log('loanLength ',this.formData.loanLength);
+                    //console.log('slider ----', element.label,'----', element.value);
+                break;
+
+                default:
+                    console.log('default element.label', element.label);
+                    //isValidated = false;
+                break;
+                // code block
+            }
+            element.reportValidity();
+        });
+    
+        //console.log('payFrequency', this.formData.payFrequency);
+        if(this.formData.payFrequency === undefined || this.formData.payFrequency === null || this.formData.payFrequency === ''){
+
+            this.isLoading = false;
+            //alert('Pay Frequency is required');
+            this.formData.payFrequencyvalidation='Pay Frequency is required';
+            return false;
+        }
+
+        this.isLoading = false;
+
+        return isValidated;
+    }
+
+    funAboutYouVals(stepButtonValue) {
+        let validataionVar = { isValidated: true, portal_login: false };
+        var isValidated = true;
+        this.template.querySelectorAll('[data-id="aboutyouvals"]').forEach(element => {
+
+            switch (element.label) {
+
+                case 'Title':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.title = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'First Name':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.firstName = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Middle Name':
+
+                    this.formData.middleName = element.value;
+
+                break;
+
+                case 'Last Name':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.lastName = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Choose Password':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.choosePassword =  element.value;//Buffer.from(element.value, 'base64');
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Confirm Password':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.confirmPassword = element.value; // Buffer.from(element.value, 'base64');;
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Email':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.email = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Confirm Email':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.confirmemail = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Mobile':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");                     
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        const mobileVal = element.value;
+                        const res = /^[0][4]\d{8}$/.test(mobileVal);
+                        //console.log('phone validation res-->', res);
+                        if (res) {
+                            this.formData.mobile = element.value;
+                        }
+                        else {
+                            this.isLoading = false;
+                            isValidated = false;
+                            element.setCustomValidity("Phone number should be 04XXXXXXXX and 10 digits only!");
+                        }
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                case 'Date of Birth':
+                   
+                    var previousYear;
+                    var CurrentYear;
+
+                     if(this.dateValues.maxDate != null){
+                     var SplitYear = (this.dateValues.maxDate).split("-");
+                     previousYear  = SplitYear[0];
+                     }
+
+                     if(element.value != null){
+                     var SplitCurrentYear = (element.value).split("-");
+                     CurrentYear = SplitCurrentYear[0];
+                     }
+
+                     console.log('previousYear-->'+previousYear);
+                     console.log('CurrentYear-->'+CurrentYear);
+                    
+                   
+
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                       
+                    }
+
+                    if(CurrentYear > previousYear)
+                    {
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity("You must to enter date before "+previousYear);
+                    }
+
+                   
+                    
+                    else {
+                         
+                       /*const birthdate = element.value;
+                       const maxdate =  /^\d{4}-\d{2}-\d{2}$/.test(birthdate);
+                        if(maxdate){
+                            this.isLoading = false;
+                            this.formData.dateOfBirth = element.value;
+                        }
+                        else{
+                            this.isLoading = false;
+                            isValidated = false;
+                            element.setCustomValidity("Your age should be greater than 18 only!");
+                        }*/
+
+                        this.formData.dateOfBirth = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                break;
+
+                default:
+                    console.log('default element.label', element.label);
+                    //isValidated = false;
+                    break;
+                // code block
+            }
+            element.reportValidity();
+        });
+
+        var password_1 = this.template.querySelector('[data-reverify-id="choosepassword"]');
+        var password_2 = this.template.querySelector('[data-reverify-id="confirmpassword"]');
+       
+        if (password_1.value !== password_2.value) { 
+            password_1.setCustomValidity("Password Does not match!");
+            password_2.setCustomValidity("Password Does not match!");
+            this.isLoading = false;
+            password_1.reportValidity();
+            password_2.reportValidity();
+            isValidated = false;  
+        }
+
+
+        var email_1 = this.template.querySelector('[data-reverify-id="email"]');
+        var email_2 = this.template.querySelector('[data-reverify-id="confirmemail"]');
+       
+        if (email_1.value !== email_2.value) { 
+            email_1.setCustomValidity("Email Does not match!");
+            email_2.setCustomValidity("Email Does not match!");
+            this.isLoading = false;
+            email_1.reportValidity();
+            email_2.reportValidity();
+            isValidated = false;  
+        }
+
+        
+        if (isValidated) {
+
+            //Map for get About You values from UI
+            this.myMap = new Map();
+            this.myMap.set('Title', this.formData.title);
+            this.myMap.set('FirstName', this.formData.firstName);
+            this.myMap.set('MiddleName', this.formData.middleName);
+            this.myMap.set('LastName', this.formData.lastName);
+            this.myMap.set('Choose Password', this.formData.choosePassword);
+            this.myMap.set('Email', this.formData.email);
+            this.myMap.set('Mobile', this.formData.mobile);
+            this.myMap.set('Date Of Birth', this.formData.dateOfBirth);
+            var obj = Object.fromEntries(this.myMap);
+
+            const jsonmap = JSON.stringify(obj);
+           // console.log(jsonmap);
+
+            this.isLoading = true;
+            CheckDuplicateUser({ 'Email': this.formData.email, 'Origin': this.Origin, 'MobilePhone': this.formData.mobile})
+                .then(result => {
+                    let response = JSON.parse(result);
+                    if (response.isSuccess) {
+                        if (response.portal_login) {
+                            //Login template variable set to true
+                            console.log('redirect to login===', response.portal_login);
+                            validataionVar.isValidated = true;
+                            validataionVar.portal_login = true;
+                            // return validataionVar;
+                        }
+                        else {
+                            //console.log('redirect to else login===', response.portal_login);
+                            validataionVar.isValidated = true;
+                            validataionVar.portal_login = false;
+                            // return validataionVar;
+                        }
+                    }
+                    else {
+                        console.log('error', response.error);
+
+                        validataionVar.isValidated = false;
+                        validataionVar.portal_login = false;
+
+                        // return validataionVar;
+                    }
+
+                    // console.log('validataio var', validataionVar);
+                    if (validataionVar.isValidated) {
+                        //console.log('****Contact Details Set to True****');
+                        if (validataionVar.portal_login) {
+                            //Redirect to login
+                            this.inPortal.Login = true;
+                        }
+                        else {
+                            this.currentSteps = this.handleSteps(this.currentSteps, stepButtonValue);
+                        }
+                    }
+                    else if (validataionVar.isValidated === undefined) {
+                        console.log('is validated undefined-->' + isValidated);
+
+                    }
+                    else {
+                        console.log('Please fill all details first');
+                    }
+
+                    this.isLoading = false;
+                })
+                .catch(error => {
+                    console.log('This is error-->', error);
+                    validataionVar.isValidated = false;
+                    validataionVar.portal_login = false;
+                    this.showError();
+
+                    logError({
+                        'Message':'PortalApplicationLWC: '+error.message,
+                        'Method': 'CheckDuplicateUser'
+                    })
+                    .then(result => {
+                       console.log('Error Successfully logged ', result);
+                    })
+                    .catch(error => { 
+                        console.log('Something went wrong! ', e.getmessage());
+                    });
+
+                    // return validataionVar;
+                });
+        }
+        else {
+            console.log('*****FINAL ELSE******');
+            validataionVar.isValidated = false;
+            validataionVar.portal_login = false;
+            //  return validataionVar;
+        }
+    }
+
+    funContactDeatils() {
+
+        var isValidated = true;
+        this.template.querySelectorAll('[data-id="contactdetailsvals"]').forEach(element => {
+
+            switch (element.label) {
+
+                /*case 'Unit #':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.unitNum = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;*/
+
+                case 'Unit #':
+
+                    this.formData.unitNum = element.value;
+
+                    break;
+
+                case 'Street #':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.streetNum = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'Street Name':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.streetName = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'Street Type':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.streetType = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'Address Suburb':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.addressSuburb = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'Address Postcode':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.addressPostcode = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'City':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.city = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'State':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.state = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+
+                default:
+                    //console.log('default element.label', element.label);
+                    //isValidated = false;
+                    break;
+                // code block
+            }
+            element.reportValidity();
+
+        });
+
+        this.isLoading = false;
+
+        return isValidated;
+    }
+
+    funEmploymentDetails(stepButtonValue) {
+        console.log('inside function');
+
+        var isValidated = true;
+        this.template.querySelectorAll('[data-id="employmentdetailsvals"]').forEach(element => {
+
+            switch (element.label) {
+
+                case 'Employment Status':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.employmentStatus = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'Annual gross income (before tax) from all sources':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.annualGrossIncome = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                case 'Employer Name (if benefits type Centrelink)':
+                    if (element.value === undefined || element.value === null || element.value === '') {
+
+                        this.isLoading = false;
+                        isValidated = false;
+                        element.setCustomValidity(element.label + " is required");
+                        //console.log('UNDEFINED', element.label,'----', element.value);
+                    }
+                    else {
+                        this.formData.employerName = element.value;
+                    }
+                    //console.log(element.label,'----', element.value);
+                    break;
+
+                default:
+                    //console.log('default element.label', element.label);
+                    //isValidated = false;
+                    break;
+                // code block
+            }
+            element.reportValidity();
+        });
+        
+        if(!isValidated){
+            return;
+        }
+        //Map for get You Loans values from UI
+        this.myMap = new Map();
+        this.myMap.set('Origin', this.Origin);
+        this.myMap.set('ReasonforyourLoan', this.formData.reasonForLoan);
+        this.myMap.set('MoreInformation', this.formData.subReasonForLoan);
+        this.myMap.set('Amount', parseFloat(this.loanAmount.replace('$','')));
+        this.myMap.set('PayFrequency', this.formData.payFrequency);
+        this.myMap.set('LoanLength', this.formData.loanLength);
+        this.myMap.set('Title', this.formData.title);
+        this.myMap.set('FirstName', this.formData.firstName);
+        this.myMap.set('MiddleName', this.formData.middleName);
+        this.myMap.set('LastName', this.formData.lastName);
+        this.myMap.set('ChoosePassword', btoa(this.formData.choosePassword));
+        this.myMap.set('Email', this.formData.email);
+        this.myMap.set('Mobile', this.formData.mobile);
+        this.myMap.set('DateOfBirth', this.formData.dateOfBirth);
+        this.myMap.set('Unit#', this.formData.unitNum);
+        this.myMap.set('Street#', this.formData.streetNum);
+        this.myMap.set('StreetName', this.formData.streetName);
+        this.myMap.set('StreetType', this.formData.streetType);
+        this.myMap.set('AddressSuburb', this.formData.addressSuburb);
+        this.myMap.set('AddressPostcode', this.formData.addressPostcode);
+        this.myMap.set('City', this.formData.city);
+        this.myMap.set('State', this.formData.state);
+        this.myMap.set('EmploymentStatus', this.formData.employmentStatus);
+        this.myMap.set('AnnualGrossIncome', this.formData.annualGrossIncome);
+        this.myMap.set('EmployerName', this.formData.employerName);
+        this.myMap.set('InfoTrue', this.formData.informationTrue);
+        this.myMap.set('ReviewTerms', this.formData.reviewedTerms);
+        this.myMap.set('PrivacyCon', this.formData.privacyConsent);
+        if(this.GCLID != null)
+        {
+            this.myMap.set('GCLID', this.GCLID);
+        }
+        var obj = Object.fromEntries(this.myMap);
+
+        const jsonmap = JSON.stringify(obj);
+        console.log(jsonmap);
+        
+        this.isLoading = true;
+        getFormValues({'data':jsonmap})
+        .then(result => {
+            console.log('called');
+
+            var res = JSON.parse(result);
+
+            var skip_bs = res.skip_bs;
+                console.log('res.skip_bs' ,skip_bs)
+
+            
+            if(res.isSuccess === true){
+
+                this.iframesrc = res.iframesrc;
+
+                this.formData.appReference = res.appReference;
+                console.log(' res.appReference-->' ,res.appReference);
+
+                //console.log('res.skip_bs',skip_bs);
+
+                if(skip_bs === false){
+
+                    window.open(res.iframesrc, "_self");
+                    
+                   //this.currentSteps = this.handleSteps(this.currentSteps, stepButtonValue);
+                    console.log('bank Statement skip = false' );
+                }
+                else{
+                    this.isLoading = false;
+                    this.currentSteps = this.handleSteps(this.currentSteps, stepButtonValue)
+                    //this.currentSteps.employmentdetails = false;
+                    //this.currentSteps.lendersearch = true;
+                    //this.currentSteps.thankYou = true;
+                    console.log('bank Statement skip = true' );
+                }
+                //this.currentSteps = this.handleSteps(this.currentSteps, stepButtonValue);
+            }
+           //this.isLoading = false;
+        })
+        .catch(error => {
+            this.isLoading = false;
+            console.log(error.message);
+            console.log('error');
+            this.showError();
+
+            logError({
+                'Message':'PortalApplicationLWC: '+error.message,
+                'Method': 'getFormValues'
+            })
+            .then(result => {
+               console.log('Error Successfully logged ', result);
+            })
+            .catch(error => { 
+                console.log('Something went wrong! ', e.getmessage());
+            });
+        });
+        // return isValidated;
+    }
+
+
+    //Used only in the forwarding steps
+    handleStepsUI(event) {
+        
+
+        this.isLoading = true;
+        console.log('isLoading: ' + this.isLoading);
+        let stepButtonValue = event.target.value;
+        console.log('stepButtonValue', stepButtonValue);
+        
+        //console.log('this.currentSteps before-->', this.currentSteps);
+
+        // Your Loans
+        if (stepButtonValue === 'aboutyou') {
+
+            var isValidated = this.funYourLoanVals();
+            if (isValidated) {
+
+                this.currentSteps = this.handleSteps(this.currentSteps, stepButtonValue);
+            }
+            else {
+                console.log('Please fill all details first');
+            }
+        }
+
+        // About You
+        else if (stepButtonValue === 'contactdetails') {
+          this.funAboutYouVals(stepButtonValue);
+        }
+
+        // Contact Details
+        else if (stepButtonValue === 'employmentdetails') {
+
+            var isValidated = this.funContactDeatils();
+      
+            if (isValidated) {
+                this.currentSteps = this.handleSteps(this.currentSteps, stepButtonValue);
+            }
+            else {
+                console.log('Please fill all details first');
+            }
+        }
+
+        // Employment Details
+        // else if (stepButtonValue === 'bankstatement') {
+        //     console.log('else if in');
+        //     this.funEmploymentDetails(stepButtonValue); 
+        // }
+
+        // Lender Search
+        else if (stepButtonValue === 'lendersearch') {
+            
+            console.log('else if in');
+     
+            this.funEmploymentDetails(stepButtonValue); 
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+
+    handleSteps(StepVar, StepName) {
+ 
+        StepName = StepName.toString();
+        this.currentStepProgress = StepName;
+        for (var variable in StepVar) {
+            //console.log(variable);
+            StepVar[variable] = false;
+        }
+        StepVar[StepName] = true;
+      
+        return StepVar;
+    }
+
+
+    //Used to render subreasons
+    handleReason(event) {
+        //console.log({ '--event.target.value': event.target.value });
+        this.formData.subReasonForLoan = undefined;
+        console.log('this.formData.subReasonForLoan-->', this.formData.subReasonForLoan);
+        let key = this.slaFieldData.controllerValues[event.target.value];
+        //console.log({ '--this.slaFieldData.values': this.slaFieldData.values });
+        this.secondayReasonValues = this.slaFieldData.values.filter(opt => opt.validFor.includes(key));
+    }
+
+
+    handleAmount(event) {
+        // console.log('check Amount -->', event.target.value);
+        this.loanAmount = event.target.value;
+
+            if(parseFloat(this.loanAmount.replace('$','')) <= 2000 && this.formData.payFrequency === 'WEEKLY' ){
+                //console.log('in side if');
+
+                this.slider.min = 10;
+                this.formData.loanLength = 14;
+                this.slider.max = 17;
+            }
+
+            else if(parseFloat(this.loanAmount.replace('$','')) >= 2000 && this.formData.payFrequency === 'WEEKLY' ){
+                //console.log('in side else if 1');
+                
+                this.slider.min = 26;
+                this.formData.loanLength = 39;
+                this.slider.max = 52;
+            }
+
+            else if(parseFloat(this.loanAmount.replace('$','')) <= 2000 && this.formData.payFrequency === 'MONTHLY' ){
+                //console.log('in side else if 2');
+                
+                this.slider.min = 3;
+                this.formData.loanLength = 3;
+                this.slider.max = 4;
+            }
+            else if(parseFloat(this.loanAmount.replace('$','')) >= 2000 && this.formData.payFrequency === 'MONTHLY' ){
+                //console.log('in side else if 3');
+               
+                this.slider.min = 7;
+                this.formData.loanLength = 10;
+                this.slider.max = 12;
+            }
+
+            else if(parseFloat(this.loanAmount.replace('$','')) <= 2000 && this.formData.payFrequency === 'FORTNIGHTLY' ){
+                //console.log('in side else if 4');
+               
+                this.slider.min = 5;
+                this.formData.loanLength = 6; 
+                this.slider.max = 8;
+            }
+            else if(parseFloat(this.loanAmount.replace('$','')) >= 2000 && this.formData.payFrequency === 'FORTNIGHTLY' ){
+                //console.log('in side else if 5');
+                
+                this.slider.min = 13;
+                this.formData.loanLength = 20; 
+                this.slider.max = 26;
+            }
+
+            else{
+                //console.log('in side else');
+                
+                this.slider = { min: 0, max: 10 };
+            }
+    }
+
+
+    //Review - See if it can be moved to connected Callback
+    handleTitle(event) {
+        //  console.log({ '--event.target.value': event.target.value });
+        this.value = event.detail.value;
+    }
+
+
+    //Address ====c/bankStatementMetadata
+    //addressFetched;
+    onAddressChange(event) {
+        var placeId = event.detail.placeId;
+        getAddress({
+            placeid: placeId
+        })
+            .then(result => {
+                //  console.log('getAddress Result', getAddress);
+                //var add
+                //this.addressFetched = JSON.parse(result);
+                var gAddress = JSON.parse(result);
+               // console.log('This is gAddress***************', gAddress);
+                //console.log('Country', gAddress.country);
+                this.testData = gAddress.country;
+                this.formData.streetNum = gAddress.street_number;
+                this.formData.streetName = gAddress.route;
+                //this.streettype = gAddress.route;
+                this.formData.addressSuburb = gAddress.locality;
+                this.formData.addressPostcode = gAddress.postal_code;
+                this.formData.city = gAddress.administrative_area_level_2;
+                this.formData.stateShortVal = gAddress.administrative_area_level_1;
+
+                let text = gAddress.route;
+                const myArray = text.split(" ");
+                //console.log('myArray', myArray);
+                this.formData.streetType = myArray[myArray.length - 1];
+                //console.log('streetType: ', this.formData.streetType);
+
+                myArray.length = myArray.length - 1;
+                var join_var = '';
+                for (let index in myArray) {
+                    if (join_var == '')
+                        join_var = myArray[index];
+                    else
+                        join_var += " " + myArray[index];
+                }
+               // console.log('join_var', join_var);
+                this.formData.streetName = join_var;
+            })
+            .catch(error => {
+                console.log('getAddress error: ' + JSON.stringify(error));
+
+                logError({
+                    'Message':'AddressSearchController: '+error.message,
+                    'Method': 'onAddressChange'
+                })
+                .then(result => {
+                   console.log('Error Successfully logged ', result);
+                })
+                .catch(error => { 
+                    console.log('Something went wrong! ', e.getmessage());
+                });
+            });
+    }
+
+
+    handleSearch(event) {
+        let searchKey = event.detail.searchTerm;
+        placeSearch({ searchPhrase: searchKey })
+            .then((results) => {
+                this.template.querySelector('c-lookup').setSearchResults(results);
+            })
+            .catch((error) => {
+                //this.notifyUser('Lookup Error', 'An error occured while searching with the lookup field.', 'error');
+                console.error('Lookup error', JSON.stringify(error));
+                this.errors = [error];
+                this.showError();
+
+                logError({
+                    'Message':'AddressSearchController: '+error.message,
+                    'Method': 'handleSearch'
+                })
+                .then(result => {
+                   console.log('Error Successfully logged ', result);
+                })
+                .catch(error => { 
+                    console.log('Something went wrong! ', e.getmessage());
+                });
+            });
+    }
+
+
+    handleSelectionChange() {
+        this.errors = [];
+    }
+
+
+    //Review
+    // State PickList
+    get state() {
+        return [
+            { label: 'ACT', value: 'ACT' },
+            { label: 'NSW', value: 'NSW' },
+            { label: 'NT', value: 'NT' },
+            { label: 'QLD', value: 'QLD' },
+            { label: 'SA', value: 'SA' },
+            { label: 'TAS', value: 'TAS' },
+            { label: 'VIC', value: 'VIC' },
+            { label: 'WA', value: 'WA' },
+        ];
+    }
+
+
+    handleState(event) {
+        this.value = event.detail.value;
+    }
+
+    //Password Hint (Help Text)
+    passwordHintClass = "slds-popover slds-popover_tooltip slds-nubbin_bottom-left slds-fall-into-ground slds-hide";
+    togglePasswordHint() {
+        this.passwordHintClass = this.passwordHintClass == 'slds-popover slds-popover_tooltip slds-nubbin_bottom-left slds-fall-into-ground slds-hide' ?
+            "slds-popover slds-popover_tooltip slds-nubbin_bottom-left slds-rise-from-ground" :
+            "slds-popover slds-popover_tooltip slds-nubbin_bottom-left slds-fall-into-ground slds-hide";
+    }
+
+
+    //To Check checkbox is checked or not
+    handleCheckboxUI(event) {
+        var checkBoxName = event.target.name;
+        //console.log('Checkbox label-->',event.target.name)
+
+        //conso//le.log('Checkbox val-->',event.target.value)
+
+        switch (checkBoxName) {
+            case 'infoTrue':
+                this.formData.informationTrue = !this.formData.informationTrue;
+                //console.log('infoTrue',this.formData.informationTrue);
+                break;
+
+            case 'reviewTerms':
+                this.formData.reviewedTerms = !this.formData.reviewedTerms;
+                //console.log('reviewTerms',this.formData.reviewedTerms);
+                break;
+
+            case 'privacyCon':
+                this.formData.privacyConsent = !this.formData.privacyConsent;
+                //console.log('privacyCon',this.formData.privacyConsent);
+                break;
+
+            default:
+                //console.log('undefined checkbox--->'+checkBoxName);
+                break;
+        }
+
+        if (this.formData.informationTrue == true && this.formData.reviewedTerms == true && this.formData.privacyConsent == true) {
+
+            this.buttonsDisabled.continueToBs = false;
+        }
+        else {
+            this.buttonsDisabled.continueToBs = true;
+        }
+    }
+
+
+    //To change slider min & max on Pay Frequency 
+    handlefrequency(event){
+
+        if(this.loanAmount === null || this.loanAmount === undefined || this.loanAmount === '')
+       {
+           return;
+       }
+
+       this.formData.payFrequency = event.target.label;
+       if(this.formData.payFrequency != null)
+       {
+            this.formData.payFrequencyvalidation = null;
+       }
+
+        switch (this.formData.payFrequency) {
+
+            case 'WEEKLY':  
+                if (parseFloat(this.loanAmount.replace('$','')) <= 2000 ) {
+                
+                    this.slider.min = 10;
+                    this.formData.loanLength = 14;
+                    this.slider.max = 17;
+                }
+                else {
+                    this.slider.min = 26;
+                    this.formData.loanLength = 39;
+                    this.slider.max = 52;
+                }
+            break;
+
+            case 'MONTHLY':
+                if (parseFloat(this.loanAmount.replace('$','')) <= 2000 ) {
+                    
+                    this.slider.min = 3;
+                    this.formData.loanLength = 3;
+                    this.slider.max = 4;
+                }
+                else {
+                    this.slider.min = 7;
+                    this.formData.loanLength = 10;
+                    this.slider.max = 12;
+                }
+            break;
+
+            case 'FORTNIGHTLY':
+                if (parseFloat(this.loanAmount.replace('$','')) <= 2000 ) {
+
+                    this.slider.min = 5;
+                    this.formData.loanLength = 6; 
+                    this.slider.max = 8;
+                }
+                else {
+                    this.slider.min = 13;
+                    this.formData.loanLength = 20; 
+                    this.slider.max = 26;
+            }
+            break;
+
+            default:
+                console.log('default element.label', element.label);
+                //isValidated = false;
+            break;
+            // code block
+        
+        }
+    }
+
+}
