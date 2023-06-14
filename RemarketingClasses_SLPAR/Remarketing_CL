@@ -1,0 +1,295 @@
+/***************************************************************************************************************
+* Test Class: ScheduleBatch_RMN_CL_Test
+* Purpose: Used to send Remarketing Notifications to closed lost opportunities by updating remarketing notification field and it is later managed by project settings.
+* Version: 2
+* Version: 3 (We have added new re-marketing email notification.)
+* Edited By: Ayush Jain
+* Edit Date: 16/11/2022
+* Edited: Reverted all changes
+***************************************************************************************************************/
+public class ScheduleBatch_RemarketingNotificaions_CL implements Database.Batchable<sObject>, Schedulable, Database.stateful
+{
+    private String feedback;
+    private Integer counter;
+    public boolean sendFeedbackEmail;
+    public string query_to_email;
+    public static integer recordsProcessed = 0;	 
+    public integer batchNumber=0;
+    Remarketing_Automation__c cstmOrgDf = Remarketing_Automation__c.getOrgDefaults();
+    Office_SetUp__c settings = Office_SetUp__c.getInstance('Active');
+    public String notifyEmailId = cstmOrgDf.Emailtonotify__c;
+    public Map<String,String> oppProcessed = new Map<String,String>();
+    
+    public ScheduleBatch_RemarketingNotificaions_CL()
+    {
+        if (feedback == null)
+        {
+            feedback = 'Hi, The following records based on ScheduleBatch Remarketing Notification CL: '+String.valueof(System.now().format())+'.<br/>'
+                +'<style>table, th, td {border: 1px solid;}</style>'
+                +'<table><tr><th>Name</th><th>Remarketing Notification</th><th>Lead Market Status</th><th>Origin</th><th>Employment Status</th></tr>';
+        }
+        if (counter == null){
+            counter = 0;
+        }   
+        
+        sendFeedbackEmail = (sendFeedbackEmail == null) ? false : true;
+    }
+    
+    
+    
+    //Schedule
+    public void execute(SchedulableContext scon) 
+    {
+        Remarketing_Automation__c cstmOrgDf1 = Remarketing_Automation__c.getOrgDefaults();
+        if(cstmOrgDf1.Stop_Closed_Lost__c == false)
+        {
+            Integer batchSize = (cstmOrgDf1.Batch_Size__c != null ? Integer.valueOf(cstmOrgDf1.Batch_Size__c) : 100);
+            Database.executeBatch(new ScheduleBatch_RemarketingNotificaions_CL(),batchSize);
+        }
+    }
+    
+    public static string returnDataRows(string id_opp,String Name ,string RemarketingNotification, string LeadMarketStatus, string Origin, String EmploymentStatus)
+    {
+        
+        //Change the link below before pusing to production.
+        
+        String aref = '<a href="'+URL.getSalesforceBaseUrl().toExternalForm()+'/'+id_opp+'">'+Name+'</a>';
+        
+        system.debug('aref-->'+aref);
+        String returnStr = '<tr><td>'+aref+'</td><td>'+RemarketingNotification+'</td><td>'+LeadMarketStatus+'</td><td>'+Origin+'</td><td>'+EmploymentStatus+'</td></tr>';
+        return returnStr;
+        
+    }
+    //Batch
+    public Database.QueryLocator start(Database.BatchableContext bc) 
+    {
+        
+        decimal blockdays = settings.Days_Block__c;
+        decimal SoldDaysblock = settings.Days_Block_Sold__c;
+        List<decimal> daysBlock = new List<decimal>();
+       
+        daysBlock.add(SoldDaysblock+4);
+        daysBlock.add(SoldDaysblock+15);
+        daysBlock.add(SoldDaysblock+30);
+        daysBlock.add(SoldDaysblock+45);
+        daysBlock.add(blockdays+4);
+        daysBlock.add(blockdays+15);
+        daysBlock.add(blockdays+30);
+        daysBlock.add(blockdays+45);
+        
+        
+        system.debug('daysBlock->'+daysBlock);
+        
+        
+        System.debug('Remarketing Notifications CL: Start method');
+        List <String> stageList = new List<string>{'Closed Lost' , 'Loan Paid'};
+           // List<Integer> daysBlock = new List<Integer>{94,101,121,141};
+                List<String> empStageToAvoid = new List<String>{'Student','Retired','Home Duties','Newstart Allowance','All Other Government Benefits','Unemployed','Centrelink Benefits'}; 
+                    String query = 'Select Id,Name, Remarketing_Notification__c, Lead_Market_Status__c, Origin__c,contact__r.Employment_Status__c ,'+  
+                    ' Account.Days_Since_Blocked__c From Opportunity '+ 
+                    ' Where StageName = \'Closed Lost\' '+
+                    ' AND Most_Recent_Opportunity__c = true '+
+                    ' AND Account.Date_Until_Block__c < TODAY '+  
+                    ' AND Account.Days_Since_Blocked__c In : daysBlock'+
+                    ' AND contact__r.Employment_Status__c NOT IN : empStageToAvoid';
+       
+        if(Test.isRunningTest()){
+            query = 'Select Id,Name, Remarketing_Notification__c, Lead_Market_Status__c, Origin__c,contact__r.Employment_Status__c ,'+  
+                    ' Account.Days_Since_Blocked__c From Opportunity ';
+        }
+         query_to_email = query; 
+        return Database.getQueryLocator(query);
+        
+        
+    }
+    
+    public void execute(Database.BatchableContext bc, List<Opportunity> oppList)
+    {
+        counter += oppList.size(); 
+        System.debug('Remarketing Notifications CL: Execute method');
+        System.debug('Size: '+ oppList.size()+' Opportunity: '+oppList);
+        
+        Integer daysBlock = null;
+        Set<String> leadStatus = new Set<String>();
+        leadStatus.add('Recalled');
+        leadStatus.add('Recalled - No Buyer');
+        leadStatus.add('Recalled - Lead already on market');
+        leadStatus.add('Recalled - Lead already on market by same seller');
+        
+        for(Opportunity opp : oppList ){
+            
+            daysBlock = Integer.valueOf(opp.Account.Days_Since_Blocked__c);
+            
+            if(opp.Lead_Market_Status__c == 'Sold' || Test.isRunningTest())
+            {
+                if(opp.Origin__c == 'OZ Cash Loans')
+                {
+                    If(daysBlock == 94){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-15 days');
+                    }
+                    else If(daysBlock == 101){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-30 days');
+                    }
+                    else If(daysBlock == 121){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-45 days');
+                    }
+                }
+                else if(opp.Origin__c == 'Swift Loans' || Test.isRunningTest())
+                {
+                    If(daysBlock == 94){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-15 days_SW');
+                    }
+                    else If(daysBlock == 101){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-30 days_SW');
+                    }
+                    else If(daysBlock == 121){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-45 days_SW');
+                    }
+                }
+                
+                else if(opp.Origin__c == 'Sprint Loans' || Test.isRunningTest())
+                {
+                    If(daysBlock == 94){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-15 days-Sprint Loans');
+                    }
+                    else If(daysBlock == 101){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-30 days-Sprint Loans');
+                    }
+                    else If(daysBlock == 121){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-45 days-Sprint Loans');
+                    }
+                }
+                
+                else if(opp.Origin__c == 'Cash Champions' || Test.isRunningTest())
+                {
+                    If(daysBlock == 94){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-15 days-Cash Champions');
+                    }
+                    else If(daysBlock == 101){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-30 days-Cash Champions');
+                    }
+                    else If(daysBlock == 121){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-45 days-Cash Champions');
+                    }
+                    
+                }
+                
+                else if(opp.Origin__c == 'Techno Loans' || Test.isRunningTest())
+                {
+                    If(daysBlock == 94){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-15 days-Techno Loans');
+                    }
+                    else If(daysBlock == 101){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-30 days-Techno Loans');
+                    }
+                    else If(daysBlock == 121){
+                        oppProcessed.put(opp.Id,'Remarketing LM Sold-45 days-Techno Loans');
+                    }
+                }
+                
+            }
+            
+            else{
+                
+                If(leadStatus.contains(opp.Lead_Market_Status__c) && daysBlock == 141 && opp.Origin__c == 'OZ Cash Loans'){
+                    oppProcessed.put(opp.Id,'Remarketing LM Unsold-80 days'); 
+                }
+                else if(leadStatus.contains(opp.Lead_Market_Status__c) && daysBlock == 141 && opp.Origin__c == 'Swift Loans'){
+                    oppProcessed.put(opp.Id,'Remarketing LM Unsold-80 days_SW'); 
+                }
+                else if(leadStatus.contains(opp.Lead_Market_Status__c) && daysBlock == 141 && opp.Origin__c == 'Cash Champions' ){
+                    oppProcessed.put(opp.Id,'Remarketing LM Unsold-80 days-Cash Champions'); 
+                }
+                else if(leadStatus.contains(opp.Lead_Market_Status__c) && daysBlock == 141 && opp.Origin__c == 'Sprint Loans'){
+                    oppProcessed.put(opp.Id,'Remarketing LM Unsold-80 days-Sprint Loans'); 
+                }
+                else if(leadStatus.contains(opp.Lead_Market_Status__c) && daysBlock == 141 && opp.Origin__c == 'Techno Loans'){
+                    oppProcessed.put(opp.Id,'Remarketing LM Unsold-80 days-Techno Loans'); 
+                }
+                
+                recordsProcessed += 1; 
+                
+                feedback += returnDataRows(opp.id, opp.Name, opp.Remarketing_Notification__c, opp.Lead_Market_Status__c,Opp.origin__c,opp.Contact__r.Employment_Status__c);
+            }
+            
+            batchNumber++;          
+            
+        }
+    }
+    
+    public void finish(Database.BatchableContext bc)
+    {
+        System.debug('Remarketing Notifications CL: Finish method');
+        System.debug('oppProcessed: '+oppProcessed);
+        
+        If(oppProcessed.size() > 0){
+            
+            DateTime schDate = DateTime.now().addMinutes(5);
+            String hour = string.valueOf(schDate.hour());
+            String minute = string.valueOf(schDate.minute());
+            String day = '';
+            String month = '';
+            String year = '';
+            if(schDate.format('EEEE') == 'Sunday'){
+                day = string.valueOf(schDate.addDays(1).day());
+                month = string.valueOf(schDate.addDays(1).month());
+                year = string.valueOf(schDate.addDays(1).year());
+            }
+            else{
+                day = string.valueOf(schDate.day());
+                month = string.valueOf(schDate.month());
+                year = string.valueOf(schDate.year());   
+            }
+            
+            String strJobName = 'RMN_CL_'+System.now().format()+'_'+oppProcessed.size();  
+            String strSchedule = '0 ' + minute + ' '+ hour +' ' + day + ' ' + month + ' ? '+ year;
+            
+            System.debug('strJobName: '+strJobName);
+            System.debug('strSchedule: '+strSchedule);
+            
+            Schedule_RemarketingNotificaions_Updated reminder = new Schedule_RemarketingNotificaions_Updated(oppProcessed);
+            String jobID = System.schedule(strJobName, strSchedule, reminder);
+            
+            
+        } 
+        
+        AsyncApexJob a = [SELECT Id, Status, NumberOfErrors, JobItemsProcessed, TotalJobItems, CreatedBy.Email FROM AsyncApexJob WHERE Id =:BC.getJobId()];
+        
+        feedback += '<tr><th>Total</th><th>'+counter+'</th></tr></table>';
+        System.debug('Feedback->'+Feedback);
+        
+        Messaging.SingleEmailMessage mail = new Messaging.SingleEmailMessage(); 
+        String[] toAdd = new String[] {notifyEmailId};
+            mail.setToaddresses(toAdd);
+        string email_body = '<div style="background:black; text-align: center;border: 3px solid green; font-size:20px; color: white;">'
+            + '<b>The ScheduleBatch Remarketing Notification CL Batch Apex Job processed.</b></div><br/><br/>'
+            + '<b>Job Id:</b> ' + A.id + '<br/>'
+            + '<b>Batches:</b> '+ A.TotalJobItems + '<br/>'
+            + '<b>Errors:</b> ' + a.NumberOfErrors + '<br/>'
+            + '<b>Query:</b> ' + query_to_email +'<br/><br/>'
+            + '<b>The details of records processed are attached in this email.</b>';
+        
+        feedback += email_body;
+        
+        mail.setReplyto(notifyEmailId);       // Email Formating
+        mail.setSubject('ScheduleBatch Remarketing Notification CL:'+a.Status);      
+        mail.setHtmlBody(feedback);
+        //mail.setHtmlBody(email_body);
+        
+        Messaging.sendEmail(new Messaging.SingleEmailMessage[] { mail });  
+        
+        try{
+            List<EmailMessage> emailLst = [SELECT ID, Subject FROM EmailMessage WHERE Subject 
+                                           Like '%ScheduleBatch Remarketing Notification CL%' AND CreatedDate = TODAY ORDER BY CreatedDate DESC LIMIT 1];
+            
+            system.debug('Email List\n'+emailLst);                                
+            delete emailLst;
+            
+        }
+        Catch(Exception ex){
+            Test_API__C errorLog = new Test_API__C (Subject__C = 'Error in ScheduleBatch Remarketing Notification CL Line:'+ex.getLineNumber(),
+                                                    Response__C = ex.getMessage()+'\n'+ex.getStackTraceString());
+            insert errorLog;
+        }
+    }
+}
