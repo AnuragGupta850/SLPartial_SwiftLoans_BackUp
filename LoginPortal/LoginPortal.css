@@ -1,0 +1,238 @@
+.headerLogoMobile{
+    background-color: #09303F;
+    height: 55px;
+  }
+.myTestCSS{
+    color: red;
+}
+
+  .headerLogo{
+    background-color: #09303F;
+    height: 140px;
+   
+  }
+  .footerLogo{
+    background-color: #09303F;
+      padding: 0.5rem 0 1rem 0;
+      margin-top: auto;
+      
+      width: 100%;
+  flex-shrink: 0;
+  }
+
+  .footerLogologin{
+    margin-top: 13%;
+    background-color: #09303F;
+      padding: 3.5rem 0 1rem 0;
+
+  }
+  .footerLogoMobile{
+    background-color: #09303F;
+      padding: 0.5rem 0 1rem 0;
+      margin-top: auto;
+      
+  }
+  .mydetailscascade {
+    padding-left: 1%;
+    padding-right: 1%;
+    }
+    .mydetailsfun:hover{
+        color: rgb(70 136 244);
+        
+    }
+    .slds-current-color{
+        color: #094e5d;
+    }
+
+    .class1{
+        color: #050e3a;
+    }
+    
+    
+    .headerStyle_right{ 
+        padding-top: 5%;  
+        float: right;
+    }
+    
+    .center-align-questions{
+        text-align: center;
+        font-weight: bold;
+        font-size: x-small;
+    }
+    
+    lightning-button.button {
+        --sds-c-button-brand-color-background: #094e5d;
+        --sds-c-button-text-color: #094e5d;
+        padding-top: 2%;
+        padding-left: 2%;
+        padding-right: 2%; 
+        
+    }
+    lightning-button.button1 {
+    --sds-c-button-brand-color-background: #2e842e;
+    --sds-c-button-text-color: rgb(139, 245, 139);
+    --slds-c-button-color-border-active:#4dd1e8;
+    padding-top: 2%;
+       
+        
+    }
+    .buttoncolor{
+        background-color: #094e5d;
+        color: white;
+        box-shadow: 5px 5px 2px lightslategray;
+        padding: 1px;
+    }
+    lightning-button.buttoncolor {
+        --sds-c-button-text-color: rgb(139, 245, 139);
+    
+    }
+
+    
+    
+    .button-group{
+       display: inline-flex;
+       width: 100%;
+    }
+    
+    
+    .single-button{
+        padding-left: 1%;
+        padding-right: 1%;
+        padding-bottom: 1%;
+        width: max-content;
+    }
+    
+    
+    .center-text{
+        color: #4285f4;  
+    }
+    
+    
+    .max-content{
+        width:  100%;
+    }
+    
+    
+    /* ---------Table------------ */
+    .custom-table{
+        font-size: small;
+    }
+    
+    .table{
+        display:inline-block;
+        margin: 2%;
+        padding-left: 10%;
+        padding-right: 10%;
+    }
+    
+    
+    .slds-tabs_default__link{
+        color: aqua;
+    }
+    
+    
+    .slds-th__action{
+        background-color: #094e5d;
+    }
+    
+    
+    table {
+        font-family: arial, sans-serif;
+        border-collapse: collapse;
+    }
+      
+    
+    td {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+    } 
+    
+    
+    th {
+        border: 1px solid #dddddd;
+        text-align: left;
+        padding: 8px;
+        background-color: #094e5d;
+        color: white;
+    }
+    
+    
+    .heading{
+        color: #094e5d; 
+        font-size:25px;
+    }
+    
+    .center-align-questions{
+        text-align: center;
+        font-weight: bold;
+    }
+    
+    @media screen and (max-width: 1080px) {
+        
+        .DesktopImg{
+            display:none;
+        }
+        .main_div{
+          
+            padding-left: 4%;
+            padding-right: 4%;
+            padding-top: 1%;
+            padding-bottom: 2%;
+            width: 100%;
+        }
+    }
+    
+    @media screen and (min-width: 1080px) {
+        .mydetials_input{
+            width: 75%;
+        }
+        .welcomediv {
+            display: none;
+         }
+         .MobileImg{
+            display:none;
+        }
+        .main_div{
+          
+            padding-left: 12%;
+            padding-right: 12%;
+            padding-top: 5%;
+            padding-bottom: 3%;
+            width: 100%;
+            
+        }
+    }
+    .Loginpage{
+        width: 100%;
+        padding: 15%;
+    }
+    
+    .boxshadow{
+        box-shadow: 10px 10px 5px lightslategray;
+       
+    }
+
+    /* .container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      } */
+      .main-content {
+        flex: 1;
+      }
+
+      .slds-spinner_container  {
+
+        position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 9999;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    
+    }
