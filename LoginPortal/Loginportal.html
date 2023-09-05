@@ -1,0 +1,900 @@
+<template>
+    <div class="container">
+        <template if:true={progressbarTypeDetailed}>
+            <c-custom-toast-notification timeout={timeout} sticky={sticky}></c-custom-toast-notification>
+        </template>
+
+        <template if:false={progressbarTypeDetailed}>
+            <c-custom-toast-notification timeout={timeout} sticky={sticky}></c-custom-toast-notification>
+        </template>
+
+
+
+        <template if:true={TrackVarTemp.headerfooter}>
+            <template if:true={progressbarTypeDetailed}>
+
+                <div class="headerLogo">
+                    <div class="slds-grid slds-gutters" style="height:100%;">
+                        <div class="slds-col slds-size_1-of-2 slds-align_absolute-center">
+                            <img src={TrackVarTemp.logoUrlDesktop}
+                                style="max-width: 150px;position: absolute;left: 10%;" />
+                        </div>
+                        <template if:true={TrackVarTemp.logoutbutton}>
+                            <div class="slds-col slds-size_1-of-2 slds-align_absolute-center">
+                                <div style="position: absolute;right: 10%;">
+                                    <lightning-button variant="brand" class="Loginbutton" label="Logout"
+                                        title="Primary action" onclick={handleLogin}></lightning-button>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+            </template>
+
+            <template if:false={progressbarTypeDetailed}>
+
+                <div class="footerLogoMobile">
+                    <div class="slds-align_absolute-center">
+                        <!-- Production --> <img
+                            src="https://swiftloan.my.salesforce-sites.com/portal/resource/1679985940000/OCLNewLogoMobile?"
+                            height="80" />
+                    </div>
+                </div>
+            </template>
+        </template>
+
+        <!-- <br/>
+        <template if:true={progressbarTypeDetailed}>
+            <div class="slds-align_absolute-center" style="float: right;">
+                <span class="slds-icon_container slds-icon-utility-user slds-current-color"
+                    title="Apply Now">
+                    <svg class="slds-icon slds-icon_small">
+                        <use xlink:href="/_slds/icons/utility-sprite/svg/symbols.svg#user"></use>
+                    </svg>
+                    <span class="slds-assistive-text"></span>
+                </span>
+                <p style="font-size: 100%; color:brown">Hey {LenderResponse.OpporName}</p>
+        </div>
+            </template> -->
+
+
+        <div class="main_div">
+
+          
+            <!-- Header -->
+
+
+            <template if:true={steps.login}>
+                <br />
+                <div class="slds-grid slds-gutters">
+
+                    <div class="slds-col slds-size_1-of-2 DesktopImg">
+
+                        <div class="footerLogologin">
+                            <div class="slds-align_absolute-center">
+                                <!-- Production --> <img src={TrackVarTemp.logoUrlDesktop} height="200" width="300" />
+                            </div>
+                        </div>
+
+                        <H1 style="font-size: 1.2em; padding-top: 6%;padding-left: 12%;">Fast Online Personal Cash Loans
+                            Up to $4,500</H1>
+                    </div>
+
+
+
+                    <div class="slds-box boxshadow" style="width: 100%;">
+                        <div style="font-size:20px; color: #050e3a;text-align:center;">
+                            <H1><b>Welcome!<br> Please login to your VIP member area</b></H1><br>
+                        </div>
+
+
+                        <!-- Wrong Password or email  -->
+                        <template if:true={renderingData.UserPasswordMatch}>
+                            <div class="slds-form-element__help" style="color:red; text-align:center;"
+                                id="error-message-id-49">Email or Password does not match
+                            </div>
+                        </template>
+
+                        <template if:true={renderingData.showSessionWarning}>
+                            <H2 style="color:red;" class="slds-align_absolute-center">Your session has expired, Please
+                                login again.</H2>
+                        </template>
+
+
+                        <div class="slds-align_absolute-center">
+                            <ul>
+                                <li>
+                                    <lightning-input label="Email Address" type="email" padding="around-small"
+                                        data-id="loginPage" placeholder="User: Email Address" onclick={hideerror}>
+                                    </lightning-input>
+                                </li>
+                                <li>
+                                    <lightning-input class="profileInput" label="Password" type="password"
+                                        padding="around-small" data-id="loginPage" placeholder="Password"
+                                        onclick={hideerror}></lightning-input>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <lightning-layout multiple-rows style="padding-top: 1%; ">
+
+                            <lightning-layout-item padding="around-small" size={deviceSizeForButtons.currentSize}
+                                small-device-size={deviceSizeForButtons.small}
+                                medium-device-size={deviceSizeForButtons.medium}
+                                large-device-size={deviceSizeForButtons.large}>
+                                <lightning-button class="button" variant="brand" label="Login" onclick={handleStepsUI}
+                                    value="firstlogin" style="display: grid; text-align:center;"></lightning-button>
+                            </lightning-layout-item>
+
+                            <lightning-layout-item padding="around-small" size={deviceSizeForButtons.currentSize}
+                                small-device-size={deviceSizeForButtons.small}
+                                medium-device-size={deviceSizeForButtons.medium}
+                                large-device-size={deviceSizeForButtons.large}>
+                                <lightning-button class="slds-button button" label="Forgot Password"
+                                    onclick={handleStepsUI} value="forgot"
+                                    style="display: grid; text-align:center;"></lightning-button>
+                            </lightning-layout-item>
+
+                            <hr class="slds-align_absolute-center"
+                                style="height: 2px; width:90%; border-width:0; color:#c3d9ee; background-color:#c3d9ee;margin-bottom: 8px;margin-top: 8px;">
+                            <lightning-button class="button1 slds-button slds-align_absolute-center" variant="brand"
+                                label="New Customer? Apply here" value="newapplication" onclick={handleStepsUI}
+                                style="display: grid; text-align:center;"></lightning-button>
+
+
+                        </lightning-layout>
+                    </div>
+                </div>
+            </template>
+
+            <template if:true={renderingData.isLoggedIn}>
+                <br />
+                <template if:false={progressbarTypeDetailed}>
+
+                    <!-- <div class=" mydetailscascade" style="width: 100%;"> -->
+
+                    <div class="slds-grid slds-gutters slds-align_absolute-center">
+
+                        <div class="slds-align_absolute-center">
+                            <div class="slds-col" onclick={applynowfun}>
+                                <span class="slds-icon_container slds-icon-utility-edit_form applynowval slds-align_absolute-center slds-current-color"
+                                    title="Apply Now">
+                                    <svg class="slds-icon slds-icon_small">
+                                        <use xlink:href="/_slds/icons/utility-sprite/svg/symbols.svg#edit_form"></use>
+                                    </svg>
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                                <p style="font-size: 50%;">Apply Now</p>
+                            </div>
+                        </div>
+
+                        <div class="slds-align_absolute-center">
+                            <div class="slds-col" onclick={myloans}>
+                                <span class="slds-icon_container slds-icon-utility-money myloansval slds-align_absolute-center slds-icon-text-warning"
+                                    title="My Loans">
+                                    <svg class="slds-icon slds-icon_small">
+                                        <use xlink:href="/_slds/icons/utility-sprite/svg/symbols.svg#money"></use>
+                                    </svg>
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                                <p style="font-size: 50%;">My Loans</p>
+                            </div>
+                        </div>
+
+                        <div class="slds-align_absolute-center">
+                            <div class="slds-col " onclick={mydetailsfun}>
+                                <span class="slds-icon_container slds-icon-utility-user mydetailsval slds-align_absolute-center slds-current-color"
+                                    title="View Profile">
+                                    <svg class="slds-icon slds-icon_small">
+                                        <use xlink:href="/_slds/icons/utility-sprite/svg/symbols.svg#user"></use>
+                                    </svg>
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                                <p style="font-size: 50%;" >View Profile</p>
+                            </div>
+                        </div>
+                        <div class="slds-align_absolute-center">
+                            <div class="slds-col " onclick={repayMyLoanfun}>
+                                <span class="slds-icon_container slds-icon-utility-user repayloansval slds-align_absolute-center slds-current-color"
+                                    title="Repay My Loan">
+                                    <svg class="slds-icon slds-icon_small">
+                                        <use xlink:href="/_slds/icons/utility-sprite/svg/symbols.svg#currency"></use>
+                                    </svg>
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                                <p style="font-size: 50%;" >Repay My Loan</p>
+                            </div>
+                        </div>
+                        <div class="slds-align_absolute-center">
+                            <div class="slds-col " onclick={handleLogin}>
+                                <span class="slds-icon_container slds-icon-utility-logout logoutval slds-align_absolute-center slds-current-color"
+                                    title="Logout">
+                                    <svg class="slds-icon slds-icon_small">
+                                        <use xlink:href="/_slds/icons/utility-sprite/svg/symbols.svg#logout"></use>
+                                    </svg>
+                                    <span class="slds-assistive-text"></span>
+                                </span>
+                                <p style="font-size: 50%;">Logout</p>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- </div> -->
+                    <br />
+                    <hr
+                        style="padding: 0% !important; height: 2px; width:100%; border-width:0; color:#c3d9ee; background-color:#c3d9ee;margin-bottom: 8px;margin-top: 8px;">
+                    <br />
+
+
+
+                </template>
+            </template>
+
+          
+
+            <!-- Navigation Buttons -->
+            <div class="slds-grid slds-gutters">
+                <template if:true={renderingData.isLoggedIn}>
+                    <template if:true={progressbarTypeDetailed}>
+                        <div class="slds-col slds-size_1-of-5">
+                            <div class="slds-box boxshadow">
+                                <div class="demo-only" style="width:100%">
+                                    <nav class="slds-nav-vertical" aria-label="Sub page">
+                                        <div class="slds-nav-vertical__section">
+                                            <div class="slds-grid slds-gutters">
+                                                <div class="slds-col">
+                                                    <lightning-icon icon-name="utility:keypad" c></lightning-icon>
+                                                </div>
+                                                <div class="slds-col">
+                                                    <H1 id="entity-header" class="slds-align_absolute-center"
+                                                        style="font-size:22px;padding-right:32%">
+                                                        <b> Dashboard</b>
+                                                    </H1>
+                                                </div>
+                                            </div>
+                                            <ul aria-describedby="entity-header">
+                                                <hr
+                                                    style="height: 2px; width:100%; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;">
+                                                </br>
+                                                <li class="slds-nav-vertical__item">
+                                                    <button class="slds-button slds-nav-vertical fontbold applynow"
+                                                        onclick={handleStepsUI} value="applynow">Apply Now</button>
+                                                </li>
+                                                <li class="slds-nav-vertical__item">
+                                                    <button
+                                                        class="slds-button slds-nav-vertical fontbold myloans buttoncolor"
+                                                        onclick={handleStepsUI} value="myloans">My Loans</button>
+                                                </li>
+                                                <li class="slds-nav-vertical__item">
+                                                    <button class="slds-button slds-nav-vertical fontbold mydetails"
+                                                        onclick={handleStepsUI} value="mydetails">View Profile</button>
+                                                </li>
+                                                <li class="slds-nav-vertical__item">
+                                                    <button class="slds-button slds-nav-vertical fontbold repayMyLoan"
+                                                        onclick={handleStepsUI} value="repayMyLoan">Repay My Loan</button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </nav>
+                                </div>
+                            </div>
+                        </div>
+                    </template>
+                </template><br />
+
+
+                <template if:true={steps.repayloansTemp}>
+
+
+                   
+                        <lightning-card>
+                            <div style="padding: 2%;">
+
+                            <div class="heading">
+                                <H1><b>Current Loan Balance Information</b></H1>
+                            </div>
+
+                            <hr
+                                style="height: 2px; width:100%; border-width:0; color:#2c3e50; background-color:#2c3e50">
+
+                            <div>
+                                <h1>
+                                    Your Current Loan Balance :<b>${LenderResponse.CurrentLedgerBalance}</b><br /><br />
+                                    If you would like to repay your loan early, it is easy, and we do not charge early
+                                    payout fees.<br /><br />
+                                    Just deposit the balance of your loan into our bank account:<br /><br /></h1>
+                            </div>
+                            <div class="slds-align_absolute-center custom-table  slds-text-body_small">
+                                <table class="boxshadow">
+                                    <tr>
+                                        <th>Bank</th>
+                                        <th>Name</th>
+                                        <th>BSB</th>
+                                        <th>Account Number</th>
+                                        <th>Reference</th>
+                                    </tr>
+
+                                    <tr>
+
+                                        <td>CBA</td>
+                                        <td>OZ Cash Loans</td>
+                                        <td>063-170</td>
+                                        <td>1026 1905</td>
+                                        <td>Please use your Loan Number :<b>{LenderResponse.MinITLoanID}</b></td>
+
+                                    </tr>
+                                </table><br><br />
+                            </div><br>
+
+                            <div>
+                                <h1>
+                                    Please note, if you have made a loan repayment within the last 4 business days, this
+                                    repayment may not have yet cleared, and therefore might not be included in your loan
+                                    balance.<br /><br />
+
+                                    Please email us at customer-care@ozcashloans.com.au after you have made the deposit
+                                    so that we can look out for it in our bank account.<br /><br />
+
+                                    If you would like to clarify the payout figure or pay your loan over the phone using
+                                    your debit card, please contact our friendly staff on 0432993406 and they will
+                                    arrange this for you.<br /><br />
+
+                                    If you would like to view the transactions on your loan, please select "My Loans"
+                                    from the left-hand menu. Then select "Status" for the loan that you are
+                                    interested in, then select the green "View my transactions" button.
+                                </h1>
+                            </div>
+
+                        </div>
+
+                        </lightning-card>
+                </template>
+
+                <template if:true={steps.noLoanActiveTemp}>
+
+                    <div class="slds-box boxshadow" style="width:100%">
+                       
+                    <div class="heading">
+                        <H1><b>Current Loan Balance Information</b></H1>
+                    </div>
+                    <hr
+                    style="height: 2px; width:100%; border-width:0; color:#2c3e50; background-color:#2c3e50">
+
+                    <strong class="slds-align_absolute-center"> There are no active loans here!</strong>
+                </div>
+                    
+                </template>
+
+                <!-- Error Screen -->
+                <template if:true={steps.error}>
+                    <H1>Oops! Something went wrong.<br />We have reported the issue.<br />Please refresh the page!</H1>
+                </template>
+
+
+                <!-- Loading Spinner -->
+
+                <template if:true={steps.loading}>
+                    <lightning-spinner class="slds-p-top_x-large slds-spinner_container" alternative-text="Loading"
+                        size="large" variant="brand">
+                    </lightning-spinner>
+                </template>
+
+                <!-- Previous Loans -->
+                <template if:true={steps.myloans}>
+
+                    <!-- <template if:true={progressbarTypeDetailed}> -->
+                    <div class="myloanspage " style="width:100%">
+
+                        <div class="slds-align_absolute-center custom-table  slds-text-body_small">
+                            <table class="boxshadow">
+                                <tr>
+                                    <th>Application Date</th>
+                                    <th>Your Reference</th>
+                                    <th>Amount</th>
+                                    <th>Status</th>
+                                   
+                                </tr>
+                                <template for:each={filteredData.previousloans} for:item="previous_opps">
+                                    <tr key={previous_opps.OppId}>
+
+                                        <td>{previous_opps.ApplicationDate}</td>
+                                        <td>{previous_opps.Name}</td>
+                                        <td>{previous_opps.Amount}</td>
+                                        <td>
+                                            <lightning-button label={previous_opps.ApplicationStatus} onclick={redirectToDetails}
+                                                value={previous_opps.OppId}></lightning-button>
+                                        </td>
+
+                                    </tr>
+                                </template><br><br />
+                            </table><br><br />
+                        </div>
+                    </div>
+                </template>
+
+
+                <!-- New Loan - Logged in -->
+                <template if:true={steps.applynow}>
+                    <div class="slds-box" style="width:100%">
+                        <H1 class="heading slds-align_absolute-center"><b> New Application </b>
+                        </H1>
+
+                        <c-portal-new-application origin="OZ Cash Loans" loggedinuser={TrackVarTemp.loggedinuser}
+                            privacyacknowledgement={privacy_acknowledgement} creditguide={credit_guide} warningborrowing={warning_borrowing}
+                            creditsenseagency={credit_sense_agency} electronicauthorisation={electronic_authorisation}
+                            sfpuid={renderingData.sfpuId} minamount={_minamount} maxamount={_maxamount}
+                            amountstepsize={_amountstepsize} appref={TrackVarTemp.app_ref}>
+                        </c-portal-new-application>
+                    </div>
+                </template>
+
+                <template if:true={steps.userIsBlock}> 
+
+                    <div class="slds-box boxshadow" style="width:100%">
+                        <div class="heading">
+                            <H1 class="heading slds-align_absolute-center"><b> New Application </b></H1>
+                        </div>
+
+                        <hr
+                            style="height: 2px; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;"><br/>
+
+                            <h1 class="slds-align_absolute-center"> <b>As you have recently applied for a loan. Please wait until {LenderResponse.blockUserDate} before applying again.</b>
+                            </h1>
+                    </div>
+
+
+                </template>
+
+                <template if:true={steps.checkLoanPaidUser}>
+
+                    <div class="slds-box boxshadow" style="width:100%">
+                        <div class="heading">
+                            <H1 class="heading slds-align_absolute-center"><b> New Application </b></H1>
+                        </div>
+
+                        <hr
+                            style="height: 2px; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;"><br/>
+
+                            <h1 class="slds-align_absolute-center"> <b>You currently have an active loan, you can re-apply when this loan has been completed.</b>
+                            </h1>
+                    </div>
+
+
+                </template>
+
+                <template if:true={steps.seemsWrong}>
+
+                    <div class="slds-box boxshadow" style="width:100%">
+                        <div class="heading">
+                            <H1 class="heading slds-align_absolute-center"><b> Error Notification </b></H1>
+                        </div>
+
+                        <hr
+                            style="height: 2px; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;"><br/>
+
+                            <h1 class="slds-align_absolute-center"> <b>There appears to be an error. Please contact us at customer-care@ozcashloans.com.au or submit the form below.</b>
+                            </h1><br/>
+
+                            <lightning-input label="Other Information" data-id="ErrorNotify" placeholder="Enter Issue"></lightning-input><br/>
+
+                            <lightning-button class="button1 slds-button slds-align_absolute-center" variant="brand"
+                            label="Submit Error" onclick={ErrorNotification}
+                            style="display: grid; text-align:center;"></lightning-button>
+                    </div>
+
+
+                </template>
+
+                <template if:true={steps.thankYouMsg}>
+
+                    <div class="slds-box boxshadow" style="width:100%">
+                        <div class="heading">
+                            <H1 class="heading slds-align_absolute-center"><b> Thank You </b></H1>
+                        </div>
+
+                        <hr
+                            style="height: 2px; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;"><br/>
+
+                            <h1 class="slds-align_absolute-center"> <b>Thank you we have been notified about your error. We will be in touch as soon as possible.</b>
+                            </h1>
+                    </div>
+
+
+                </template>
+
+
+
+                <!-- Update Details -->
+                <template if:true={steps.mydetails}>
+
+                    <br />
+                    <div class="slds-box boxshadow" style="width:100%">
+                        <div class="heading">
+                            <H1>
+                                <lightning-icon icon-name="utility:user"></lightning-icon><b> Personal Details </b>
+                            </H1>
+                        </div>
+
+                        <hr
+                            style="height: 4px; width:80%; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;">
+
+                        <lightning-input class="mydetials_input" label="First Name" type="text"
+                            value={formData.firstname} data-id="mydetailsvalue" disabled={TrackVarTemp.disablefields}
+                            required></lightning-input>
+                        <lightning-input class="mydetials_input" label="Last Name" type="text" value={formData.lastname}
+                            data-id="mydetailsvalue" disabled={TrackVarTemp.disablefields} required></lightning-input>
+                        <lightning-input class="mydetials_input" label="Birthdate" type="Date"
+                            value={formData.birthdate} data-id="mydetailsvalue" disabled={TrackVarTemp.disablefields}
+                            required></lightning-input><br />
+
+                        <div class="heading">
+                            <H1>
+                                <lightning-icon icon-name="utility:phone_portrait"></lightning-icon><b> Contact Details
+                                </b>
+                            </H1>
+                        </div>
+                        <hr
+                            style="height: 4px; width:80%; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;">
+
+                        <lightning-input class="mydetials_input" label="Email" type="email" value={formData.email}
+                            data-id="mydetailsvalue" disabled={TrackVarTemp.disablefields} required></lightning-input>
+                        <lightning-input class="mydetials_input" label="Phone" type="Phone" value={formData.phone}
+                            data-id="mydetailsvalue" disabled={TrackVarTemp.disablefields}
+                            required></lightning-input><br />
+
+                        <div class="heading">
+                            <H1>
+                                <lightning-icon icon-name="utility:home"></lightning-icon><b> Address </b>
+                            </H1>
+                        </div>
+                        <hr
+                            style="height: 4px; width:80%; border-width:0; color:#2c3e50; background-color:#2c3e50;margin-bottom: 8px;margin-top: 8px;">
+
+                        <lightning-input class="mydetials_input" label="Billing City" type="Address"
+                            value={formData.billingcity} data-id="mydetailsvalue" disabled={TrackVarTemp.disablefields}
+                            required>
+                        </lightning-input>
+                        <lightning-input class="mydetials_input" label="Billing Street" type="Address"
+                            value={formData.billingstreet} data-id="mydetailsvalue"
+                            disabled={TrackVarTemp.disablefields} required>
+                        </lightning-input>
+                        <lightning-combobox class="mydetials_input" name="state" label="Billing State"
+                            value={formData.billingstate} options={state} onchange={handleState}
+                            data-id="mydetailsvalue" disabled={TrackVarTemp.disablefields} required>
+                        </lightning-combobox>
+                        <lightning-input class="mydetials_input" label="Address Postcode" type="Address"
+                            value={formData.addresspostcode} data-id="mydetailsvalue"
+                            disabled={TrackVarTemp.disablefields} required>
+                        </lightning-input><br />
+
+                        <div class="slds-align_absolute-center single-button">
+                            <template if:true={ButtonsVisibility.updateDetails}>
+                                <lightning-button label="Update Details" value="enableUpdateDetails"
+                                    onclick={handleStepsUI}>
+                                </lightning-button>
+                            </template>
+                            <template if:true={ButtonsVisibility.saveDetails}>
+                                <lightning-button label="Save details" value="UpdateChangedDetails"
+                                    onclick={handleStepsUI}>
+                                </lightning-button>
+                            </template>
+                        </div>
+                    </div>
+
+                </template>
+
+
+
+                <!-- Lender searching Msg -->
+                <template if:true={steps.lenderSearchingMSG}>
+
+                    
+                    <div class="slds-box boxshadow" style="width:100%">
+                        <div class="heading slds-align_absolute-center">
+                            <H1><b>Lender Searching</b></H1>
+                        </div><br/>
+
+                        <!-- <strong class="slds-align_absolute-center"> Please wait, We are reviewing your application</strong> -->
+
+
+                        <hr class="slds-align_absolute-center" style="height: 2px; width:80%; border-width:0; color:#2c3e50; background-color:#2c3e50"><br/>
+
+                        <h1 class="slds-align_absolute-center"> <b>Please wait, We are reviewing your application</b></h1>
+                    </div>
+                   
+                </template>
+
+                <!-- Lender Response Page -->
+                <template if:true={steps.lenderResponse}>
+                    <div class="slds-box boxshadow" style="width:100%">
+                        <div class="heading">
+                            <H1><b>Confirmations and Documents</b></H1>
+                        </div>
+
+                        <hr style="height: 2px; width:100%; border-width:0; color:#2c3e50; background-color:#2c3e50">
+
+
+                        <p>You have read and accepted the following documents on: {LenderResponse.CreatedDate}</p><br />
+                        <ul style="list-style-type:square;padding-left:2%;">
+                            <li>
+                                <a href="https://ozcashloans.com.au/warning-about-borrowing/" target="_blank">Warning
+                                    About
+                                    Borrowing, </a>
+                            </li>
+                            <li>
+                                <a href=" https://www.ozcashloans.com.au/privacy-consent/" target="_blank">Privacy
+                                    acknowledgement and
+                                    consent</a>
+                            </li>
+                            <li>
+                                <a href="https://ozcashloans.com.au/bank-feed-terms-of-use/" target="_blank">Credit
+                                    Sense
+                                    Agency</a>
+                            </li>
+                            <li>
+                                <a href="https://ozcashloans.com.au/credit-guide/" target="_blank">Credit Guide, </a>
+                            </li>
+                            <li>
+                                <a href="https://www.ozcashloans.com.au/privacy-consent/" target="_blank">Privacy
+                                    Consents and Electronic Authorisation</a>
+                            </li>
+                        </ul>
+                        <br />
+                        <template if:true={LenderResponse.loanPaiddUser}>
+                            <div class="heading">
+                                <H1><b>My Loan Fees Detail</b></H1>
+                            </div>
+                            <hr
+                                style="height: 2px; width:100%; border-width:0; color:#2c3e50; background-color:#2c3e50">
+                            <div class="myloanspage " style="width:100%">
+
+                                <div class="slds-align_absolute-center custom-table  slds-text-body_small">
+                                    <table>
+                                        <tr>
+                                            <th>Principal</th>
+                                            <th>Establishment Fee</th>
+                                            <th>Monthly Credit Fee</th>
+
+                                        </tr>
+
+                                        <tr>
+
+                                            <td>{LenderResponse.oppoAmount}</td>
+                                            <td>{LenderResponse.Establishment_Fee}</td>
+                                            <td>4% per month or part there of</td>
+
+
+                                        </tr>
+
+                                    </table><br><br />
+                                </div>
+                            </div><br/>
+
+                            <button class="slds-button slds-button_success slds-align_absolute-center" onclick={viewMyTransactions} disabled={LenderResponse.transBtn} >View My Transactions</button><br>
+
+
+                            <!-- <lightning-button lable="View My Transactions"  variant="brand" onclick={viewMyTransactions}></lightning-button> -->
+
+
+
+                            <template if:true={LenderResponse.viewTransaction}>
+                                <div class="heading">
+                                <H1><b>Transactions History</b></H1>
+                            </div>
+                            <hr
+                            style="height: 2px; width:100%; border-width:0; color:#2c3e50; background-color:#2c3e50">
+
+                            <div class="slds-align_absolute-center custom-table  slds-text-body_small">
+                                <table>
+                                    <tr>
+                                        <th>Transaction Date</th>
+                                        <th>Transaction Type</th>
+                                        <th>Debit</th>
+                                        <th>Credit</th>
+                                        <th>Balance</th>
+                                       
+                                    </tr>
+                                    <template for:each={LenderResponse.transactionObj} for:item="history">
+                                        <tr key={history}>
+    
+                                            <td>{history.TransactionDate}</td>
+                                            <td>{history.TransactionType}</td>
+                                            <td>{history.Debit}</td>
+                                            <td>{history.Credit}</td>
+                                            <td>{history.Balance}</td>
+    
+                                        </tr>
+                                    </template><br><br />
+                                </table><br><br />
+                            </div><br/>
+
+                            <button class="slds-button slds-button_success slds-align_absolute-center" onclick={hideTransaction}>Hide Transaction</button>
+
+                            </template>
+
+                            <template if:true={LenderResponse.NoRecordFound}>
+
+                                <H1><strong>No Records</strong> <br />So far you dont have any transactions in the system.</H1>
+
+                            </template>
+
+                            <template if:true={LenderResponse.systemError}>
+
+                                <h1><strong>We Apologise<br /></strong> 
+                                Your transaction history cannot be loaded at this time. Please try again later.</h1>
+                            </template>
+
+                        </template>
+                    </div>
+
+                </template>
+
+
+            </div>
+
+            <!-- ForgotPassword Page -->
+            <template if:true={steps.forgotPassword}>
+
+                <div class="slds-grid slds-gutters">
+
+                    <div class="slds-col slds-size_1-of-2 DesktopImg">
+
+                        <div class="footerLogologin">
+                            <div class="slds-align_absolute-center">
+                                <!-- Production --> <img src={TrackVarTemp.logoUrlDesktop} height="200" width="300" />
+                            </div>
+                        </div>
+
+                        <H1 style="font-size: 1.2em; padding-top: 6%;padding-left: 12%;">Fast Online Personal Cash Loans
+                            Up to $4,500</H1>
+                    </div>
+
+
+                    <div class="slds-box boxshadow" style="width: 100%;">
+
+                        <div style="font-size:20px; color: #050e3a;text-align:center;">
+                            <H1><b> Enter Email Address To Forgot Password</b></H1><br>
+                        </div>
+
+
+                        <div class="slds-align_absolute-center">
+                            <ul>
+                                <li>
+
+                                    <lightning-input label="User Email" type="email" placeholder="Enter Email"
+                                        data-id="Emailval" style="font-size:20px;"></lightning-input><br />
+
+                                </li>
+                            </ul>
+                        </div>
+                        <hr class="slds-align_absolute-center"
+                            style="height: 2px; width:90%; border-width:0; color:#c3d9ee; background-color:#c3d9ee;margin-bottom: 8px;margin-top: 8px;">
+
+                        <lightning-layout multiple-rows style="padding-top: 1%; ">
+
+                            <lightning-layout-item padding="around-small" size={deviceSizeForButtons.currentSize}
+                                small-device-size={deviceSizeForButtons.small}
+                                medium-device-size={deviceSizeForButtons.medium}
+                                large-device-size={deviceSizeForButtons.large}>
+                                <lightning-button class="button" variant="brand" label="Change Password"
+                                    value="forgotpasswordbutton" onclick={handleStepsUI}
+                                    style="display: grid; text-align: center;">
+                                </lightning-button>
+                            </lightning-layout-item>
+
+
+                            <lightning-layout-item padding="around-small" size={deviceSizeForButtons.currentSize}
+                                small-device-size={deviceSizeForButtons.small}
+                                medium-device-size={deviceSizeForButtons.medium}
+                                large-device-size={deviceSizeForButtons.large}>
+                                <lightning-button class="slds-button button" label="Return to login"
+                                    value="backtologinpage" onclick={handleStepsUI}
+                                    style="display: grid; text-align: center;"></lightning-button>
+                            </lightning-layout-item>
+
+                        </lightning-layout>
+
+
+
+                    </div>
+                </div>
+
+
+            </template>
+
+
+            <!-- Logout card -->
+
+            <template if:true={steps.logoutcard}>
+                <section role="dialog" tabindex="-1" aria-labelledby="modal-heading-01" aria-modal="true"
+                    aria-describedby="modal-content-id-1" class="slds-modal slds-fade-in-open">
+                    <div class="slds-modal__container">
+                        <!-- modal header start -->
+                        <header class="slds-modal__header">
+                            <button class="slds-button slds-button_icon slds-modal__close slds-button_icon-inverse"
+                                title="Close" onclick={hideModalBox}>
+                                <lightning-icon icon-name="utility:close" alternative-text="close" variant="inverse"
+                                    size="small"></lightning-icon>
+                                <span class="slds-assistive-text">Close</span>
+                            </button>
+                            <h2 id="modal-heading-01" class="slds-text-heading_medium slds-hyphenate">Oz Cash Loans</h2>
+                        </header>
+
+                        <!-- modal body start -->
+                        <div class="slds-modal__content slds-p-around_medium" id="modal-content-id-1">
+                            <div class="slds-align_absolute-center">
+                                <H1><b>Please click on confirm to logout</b></H1>
+
+                            </div><br />
+
+                            <hr class="slds-align_absolute-center"
+                                style="height: 2px; width:90%; border-width:0; color:#c3d9ee; background-color:#c3d9ee;margin-bottom: 8px;margin-top: 8px;">
+                            <br />
+
+                            <lightning-layout multiple-rows style="padding-top: 1%; ">
+
+                                <lightning-layout-item padding="around-small" size={deviceSizeForButtons.currentSize}
+                                    small-device-size={deviceSizeForButtons.small}
+                                    medium-device-size={deviceSizeForButtons.medium}
+                                    large-device-size={deviceSizeForButtons.large}>
+                                    <lightning-button class="button1 slds-button" variant="brand" label="Confirm"
+                                        onclick={handlelogout}
+                                        style="display: grid; text-align:center;"></lightning-button>
+                                </lightning-layout-item>
+
+
+
+                                <lightning-layout-item padding="around-small" size={deviceSizeForButtons.currentSize}
+                                    small-device-size={deviceSizeForButtons.small}
+                                    medium-device-size={deviceSizeForButtons.medium}
+                                    large-device-size={deviceSizeForButtons.large}>
+                                    <lightning-button class="slds-button button" label="No" onclick={hideModalBox}
+                                        style="display: grid; text-align: center;"></lightning-button>
+                                </lightning-layout-item>
+                            </lightning-layout>
+                        </div>
+                    </div>
+                </section>
+                <div class="slds-backdrop slds-backdrop_open"></div>
+
+            </template>
+
+
+            <!-- Email Receive Page-->
+            <template if:true={steps.afterforgotemail}>
+
+                <div class="slds-grid slds-gutters">
+
+                    <div class="slds-col slds-size_1-of-2 DesktopImg">
+
+                        <div class="footerLogologin">
+                            <div class="slds-align_absolute-center">
+                                <!-- Production --> <img src={TrackVarTemp.logoUrlDesktop} height="200" width="300" />
+                            </div>
+                        </div>
+
+                        <H1 style="font-size: 1.2em; padding-top: 6%;padding-left: 12%;">Fast Online Personal Cash Loans
+                            Up to $4,500</H1>
+                    </div>
+
+                    <div class="slds-box boxshadow" style="width: 100%;">
+
+                        <div style="font-size:20px; color: #050e3a;text-align:center;">
+                            <H1><b>If email you entered exist in our system. You will receive an email to reset password
+                                    shortly!!</b></H1><br>
+                        </div>
+
+                        <hr class="slds-align_absolute-center"
+                            style="height: 2px; width:90%; border-width:0; color:#c3d9ee; background-color:#c3d9ee;margin-bottom: 8px;margin-top: 8px;">
+
+                        <lightning-button class="slds-button button slds-align_absolute-center" label="Return to login"
+                            value="backtologinpage" onclick={handleStepsUI}
+                            style="display: grid; text-align: center;"></lightning-button>
+                    </div>
+                </div>
+
+            </template>
+
+        </div>
+    </div>
+</template>
